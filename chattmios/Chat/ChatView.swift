@@ -39,29 +39,29 @@ private struct ChatScreen: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
-                messageList
-                VStack(spacing: 6) {
-                    if !socket.typingUsers.isEmpty {
-                        TypingIndicatorView(names: Array(socket.typingUsers).sorted())
-                            .frame(maxWidth: .infinity, alignment: .leading)
+            messageList
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    VStack(spacing: 6) {
+                        if !socket.typingUsers.isEmpty {
+                            TypingIndicatorView(names: Array(socket.typingUsers).sorted())
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        let toast = socket.commandError
+                        let mute = socket.muteNotice
+                        let status = socket.serverStatus
+                        if let msg = toast ?? mute ?? status {
+                            Text(msg)
+                                .font(.dmMono(13))
+                                .foregroundStyle(Brand.accent)
+                                .multilineTextAlignment(.center)
+                                .transition(.opacity)
+                        }
+                        MessageComposer(model: model)
                     }
-                    let toast = socket.commandError
-                    let mute = socket.muteNotice
-                    let status = socket.serverStatus
-                    if let msg = toast ?? mute ?? status {
-                        Text(msg)
-                            .font(.dmMono(13))
-                            .foregroundStyle(Brand.accent)
-                            .multilineTextAlignment(.center)
-                            .transition(.opacity)
-                    }
-                    MessageComposer(model: model)
+                    .animation(.easeInOut(duration: 0.2), value: socket.commandError)
+                    .animation(.easeInOut(duration: 0.2), value: socket.muteNotice)
+                    .animation(.easeInOut(duration: 0.2), value: socket.serverStatus)
                 }
-                .animation(.easeInOut(duration: 0.2), value: socket.commandError)
-                .animation(.easeInOut(duration: 0.2), value: socket.muteNotice)
-                .animation(.easeInOut(duration: 0.2), value: socket.serverStatus)
-            }
             .navigationTitle("chat™")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -116,7 +116,7 @@ private struct ChatScreen: View {
                         )
                         .id(message.id)
                     }
-                    Color.clear.frame(height: 90).id("bottom")
+                    Color.clear.frame(height: 8).id("bottom")
                 }
                 .padding(.top, 8)
             }
