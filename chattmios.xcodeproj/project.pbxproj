@@ -8,10 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		AA00000000000000000000B1 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = AA00000000000000000000B2 /* SocketIO */; };
+		CE8EDE752FF2D7CC00330F25 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = CE8EDE742FF2D7CC00330F25 /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* chattmios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = chattmios.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CE8EDE742FF2D7CC00330F25 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -35,6 +37,7 @@
 		000000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				CE8EDE742FF2D7CC00330F25 /* README.md */,
 				000000000000000000000010 /* chattmios */,
 				000000000000000000000020 /* Products */,
 			);
@@ -113,6 +116,7 @@
 		000000000000000140000000 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
+				CE8EDE752FF2D7CC00330F25 /* README.md in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */
