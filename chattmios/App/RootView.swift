@@ -16,13 +16,27 @@ struct RootView: View {
                 MainTabView()
                     .transition(.opacity)
                     .overlay {
-                        if let notice = socket.maintenanceNotice {
+                        if let notice = socket.banNotice {
+                            BannedView(
+                                message: notice,
+                                onReconnect: { socket.reconnect() },
+                                onSignOut: { Task { await auth.signOut() } }
+                            )
+                            .transition(.opacity)
+                        } else if let notice = socket.kickNotice {
+                            KickedView(message: notice) {
+                                socket.reconnect()
+                            }
+                            .transition(.opacity)
+                        } else if let notice = socket.maintenanceNotice {
                             MaintenanceView(message: notice) {
                                 socket.reconnect()
                             }
                             .transition(.opacity)
                         }
                     }
+                    .animation(.easeInOut, value: socket.banNotice)
+                    .animation(.easeInOut, value: socket.kickNotice)
                     .animation(.easeInOut, value: socket.maintenanceNotice)
             }
         }
@@ -35,12 +49,6 @@ struct RootView: View {
                 socket.connect(session: session)
             } else if newValue == .signedOut {
                 socket.disconnect()
-            }
-        }
-        .onChange(of: socket.disconnectNotice) { _, notice in
-            // A forced disconnect (ban/kick) returns the user to sign-in.
-            if notice != nil {
-                Task { await auth.signOut() }
             }
         }
     }

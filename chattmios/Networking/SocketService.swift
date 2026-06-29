@@ -22,8 +22,10 @@ final class SocketService {
     private(set) var chatMuted = false
     private(set) var guestsAllowed = true
 
-    /// Set when the server forcibly ends the session (ban/kick).
-    var disconnectNotice: String?
+    /// Set when the server bans the user.
+    private(set) var banNotice: String?
+    /// Set when the server kicks the user (can reconnect).
+    private(set) var kickNotice: String?
     /// Set when the server goes into maintenance mode (session remains valid).
     private(set) var maintenanceNotice: String?
     /// Transient moderation notices (muted/unmuted, etc.).
@@ -65,6 +67,9 @@ final class SocketService {
         socket = nil
         manager = nil
         connection = .idle
+        banNotice = nil
+        kickNotice = nil
+        maintenanceNotice = nil
     }
 
     func reconnect() {
@@ -81,6 +86,8 @@ final class SocketService {
         socket.on(clientEvent: .connect) { [weak self] _, _ in
             guard let self else { return }
             self.connection = .connected
+            self.banNotice = nil
+            self.kickNotice = nil
             self.maintenanceNotice = nil
             socket.emit("userActive")
         }
@@ -161,10 +168,10 @@ final class SocketService {
 
         // Forced disconnects
         socket.on("banned") { [weak self] data, _ in
-            self?.disconnectNotice = Self.reason(from: data.first).map { "Banned: \($0)" } ?? "You have been banned."
+            self?.banNotice = Self.reason(from: data.first) ?? "You have been banned from chat™."
         }
         socket.on("kicked") { [weak self] data, _ in
-            self?.disconnectNotice = Self.reason(from: data.first).map { "Kicked: \($0)" } ?? "You have been kicked."
+            self?.kickNotice = Self.reason(from: data.first) ?? "You have been kicked from chat™."
         }
         socket.on("maintenance") { [weak self] data, _ in
             self?.maintenanceNotice = Self.reason(from: data.first) ?? "The server is under maintenance."
