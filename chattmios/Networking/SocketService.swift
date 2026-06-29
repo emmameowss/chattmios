@@ -22,8 +22,10 @@ final class SocketService {
     private(set) var chatMuted = false
     private(set) var guestsAllowed = true
 
-    /// Set when the server forcibly ends the session (ban/kick/maintenance).
+    /// Set when the server forcibly ends the session (ban/kick).
     var disconnectNotice: String?
+    /// Set when the server goes into maintenance mode (session remains valid).
+    private(set) var maintenanceNotice: String?
     /// Transient moderation notices (muted/unmuted, etc.).
     var notice: String?
     /// Most recently received new message id (used to trigger sound/scroll).
@@ -65,12 +67,21 @@ final class SocketService {
         connection = .idle
     }
 
+    func reconnect() {
+        guard let session else { return }
+        socket?.disconnect()
+        socket = nil
+        manager = nil
+        connect(session: session)
+    }
+
     // MARK: Handlers
 
     private func registerHandlers(_ socket: SocketIOClient) {
         socket.on(clientEvent: .connect) { [weak self] _, _ in
             guard let self else { return }
             self.connection = .connected
+            self.maintenanceNotice = nil
             socket.emit("userActive")
         }
         socket.on(clientEvent: .disconnect) { [weak self] _, _ in
@@ -156,7 +167,7 @@ final class SocketService {
             self?.disconnectNotice = Self.reason(from: data.first).map { "Kicked: \($0)" } ?? "You have been kicked."
         }
         socket.on("maintenance") { [weak self] data, _ in
-            self?.disconnectNotice = Self.reason(from: data.first) ?? "The server is under maintenance."
+            self?.maintenanceNotice = Self.reason(from: data.first) ?? "The server is under maintenance."
         }
     }
 

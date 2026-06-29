@@ -15,6 +15,15 @@ struct RootView: View {
             case .signedIn:
                 MainTabView()
                     .transition(.opacity)
+                    .overlay {
+                        if let notice = socket.maintenanceNotice {
+                            MaintenanceView(message: notice) {
+                                socket.reconnect()
+                            }
+                            .transition(.opacity)
+                        }
+                    }
+                    .animation(.easeInOut, value: socket.maintenanceNotice)
             }
         }
         .animation(.easeInOut, value: auth.state)
