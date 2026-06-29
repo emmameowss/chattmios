@@ -141,6 +141,44 @@ final class RESTClient: NSObject, URLSessionTaskDelegate {
         return raw.compactMap(PendingEmoji.init(dict:))
     }
 
+    func suggestEmoji(shortcode: String, imageData: Data, mimeType: String, ext: String,
+                      notes: String?, username: String, session: String) async throws -> Bool {
+        let url = Server.url("suggest-emoji", query: [.init(name: "session", value: session)])
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue(Server.origin, forHTTPHeaderField: "Origin")
+        let boundary = "Boundary-\(UUID().uuidString)"
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        func append(_ s: String) { body.append(s.data(using: .utf8)!) }
+
+        for (name, value) in [("username", username), ("shortcode", shortcode)] {
+            append("--\(boundary)\r\n")
+            append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n")
+            append("\(value)\r\n")
+        }
+        if let notes {
+            append("--\(boundary)\r\n")
+            append("Content-Disposition: form-data; name=\"notes\"\r\n\r\n")
+            append("\(notes)\r\n")
+        }
+        append("--\(boundary)\r\n")
+        append("Content-Disposition: form-data; name=\"file\"; filename=\"emoji.\(ext)\"\r\n")
+        append("Content-Type: \(mimeType)\r\n\r\n")
+        body.append(imageData)
+        append("\r\n--\(boundary)--\r\n")
+        req.httpBody = body
+
+        let (respData, response) = try await self.session.data(for: req)
+        let obj = (try? JSONSerialization.jsonObject(with: respData) as? [String: Any]) ?? [:]
+        if let error = obj["error"] as? String { throw ServerError.message(error) }
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw ServerError.badResponse((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return (obj["autoApproved"] as? Bool) ?? false
+    }
+
     func reviewEmoji(id: String, accept: Bool, session: String) async throws {
         let url = Server.url(accept ? "admin/emoji/accept" : "admin/emoji/deny")
         var req = URLRequest(url: url)

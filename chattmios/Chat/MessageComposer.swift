@@ -7,6 +7,7 @@ struct MessageComposer: View {
 
     @State private var photoItem: PhotosPickerItem?
     @State private var showEmojiPicker = false
+    @State private var showEmojiSuggest = false
     @FocusState private var focused: Bool
 
     private var suggestions: [Autocomplete.Suggestion] {
@@ -75,6 +76,9 @@ struct MessageComposer: View {
                     insertEmoji(code)
                 } onClose: {
                     withAnimation(.easeOut(duration: 0.2)) { showEmojiPicker = false }
+                } onSuggest: {
+                    withAnimation(.easeOut(duration: 0.2)) { showEmojiPicker = false }
+                    showEmojiSuggest = true
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -85,6 +89,7 @@ struct MessageComposer: View {
             guard let newValue else { return }
             Task { await handlePhoto(newValue); photoItem = nil }
         }
+        .sheet(isPresented: $showEmojiSuggest) { EmojiSuggestView() }
     }
 
     private func toggleEmojiPicker() {

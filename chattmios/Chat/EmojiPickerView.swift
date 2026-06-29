@@ -7,6 +7,7 @@ struct EmojiPickerPanel: View {
     let emoji: [String: String]
     var onPick: (String) -> Void
     var onClose: () -> Void
+    var onSuggest: () -> Void
 
     @State private var query = ""
 
@@ -30,6 +31,12 @@ struct EmojiPickerPanel: View {
                 }
                 .padding(.horizontal, 10).padding(.vertical, 7)
                 .background(.thinMaterial, in: .capsule)
+
+                Button { onSuggest() } label: {
+                    Image(systemName: "plus.circle")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
 
                 Button { onClose() } label: {
                     Image(systemName: "keyboard.chevron.compact.down")
