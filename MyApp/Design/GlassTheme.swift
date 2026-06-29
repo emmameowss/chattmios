@@ -1,0 +1,82 @@
+import SwiftUI
+
+enum Brand {
+    /// Pink accent matching chattm.app (light: #c95c7a, dark: #F5A9B8).
+    static let accent = Color.dynamic(
+        light: Color(hexString: "#c95c7a") ?? .pink,
+        dark: Color(hexString: "#F5A9B8") ?? .pink)
+    /// A slightly deeper pink for subtle two-tone fills.
+    static let accentSecondary = Color.dynamic(
+        light: Color(hexString: "#a84765") ?? .pink,
+        dark: Color(hexString: "#ec7c9c") ?? .pink)
+
+    /// App surfaces, mirroring the website's near-black / off-white palette.
+    static let background = Color.dynamic(
+        light: Color(hexString: "#f7f7f5") ?? .white,
+        dark: Color(hexString: "#0e0e0e") ?? .black)
+    static let surface = Color.dynamic(
+        light: Color(hexString: "#eeede9") ?? .white,
+        dark: Color(hexString: "#161616") ?? .black)
+
+    static let danger = Color.dynamic(
+        light: Color(hexString: "#b85555") ?? .red,
+        dark: Color(hexString: "#d97a7a") ?? .red)
+
+    /// Verified-badge blue, matching the site's verified.png.
+    static let verified = Color(hexString: "#1d9bf0") ?? .blue
+
+    /// Monochrome pink wash used for the wordmark / soft backgrounds.
+    static var gradient: LinearGradient {
+        LinearGradient(colors: [accent, accentSecondary],
+                       startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+}
+
+extension Color {
+    /// A color that resolves differently in light vs dark mode.
+    static func dynamic(light: Color, dark: Color) -> Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light)
+        })
+    }
+}
+
+/// A rounded card that uses Liquid Glass where available.
+struct GlassCard<Content: View>: View {
+    var cornerRadius: CGFloat = 22
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        content
+            .padding(16)
+            .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+    }
+}
+
+extension View {
+    /// Apply a glass background clipped to a rounded rect.
+    func glassPanel(cornerRadius: CGFloat = 22, interactive: Bool = false) -> some View {
+        let effect: Glass = interactive ? .regular.interactive() : .regular
+        return self.glassEffect(effect, in: .rect(cornerRadius: cornerRadius))
+    }
+
+    /// Capsule glass background, handy for floating controls.
+    func glassCapsule(interactive: Bool = true) -> some View {
+        let effect: Glass = interactive ? .regular.interactive() : .regular
+        return self.glassEffect(effect, in: .capsule)
+    }
+}
+
+/// Renders a username with its (possibly gradient) color.
+struct ColoredName: View {
+    let name: String
+    let color: NameColor
+    var font: Font = .subheadline.weight(.semibold)
+    var fallback: Color = .primary
+
+    var body: some View {
+        Text(name)
+            .font(font)
+            .foregroundStyle(color.gradient(fallback: fallback))
+    }
+}
