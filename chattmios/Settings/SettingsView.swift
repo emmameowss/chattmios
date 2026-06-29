@@ -48,11 +48,11 @@ struct SettingsView: View {
                     Link(destination: Server.url("privacy")) {
                         Label("Privacy Policy", systemImage: "hand.raised")
                     }
+                    Link(destination: URL(string: "https://github.com/emmameowss/chattmios")!) {
+                        Label("Source Code", systemImage: "chevron.left.forwardslash.chevron.right")
+                    }
                     Link(destination: Server.baseURL) {
                         Label("chattm.app", systemImage: "globe")
-                    }
-                    Link(destination: URL(string: "https://github.com/emmameowss/chattm")!) {
-                        Label("Source on GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
                     }
                     LabeledContent("App version", value: appVersion)
                 }
