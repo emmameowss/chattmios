@@ -59,7 +59,7 @@ struct MyProfileView: View {
             }
             .navigationTitle("Profile")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .automatic) {
                     Button {
                         showEdit = true
                     } label: { Label("Edit", systemImage: "pencil") }

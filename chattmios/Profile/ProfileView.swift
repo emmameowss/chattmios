@@ -20,7 +20,7 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle(username)
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }

@@ -13,7 +13,7 @@ struct ModActionForm: View {
                 Section {
                     ForEach(action.fields) { field in
                         TextField(field.placeholder, text: binding(for: field.key), axis: .vertical)
-                            .textInputAutocapitalization(.never)
+                            .noAutocapitalization()
                             .autocorrectionDisabled()
                     }
                 }
@@ -22,7 +22,7 @@ struct ModActionForm: View {
                 }
             }
             .navigationTitle(action.title)
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

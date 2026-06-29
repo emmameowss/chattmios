@@ -35,7 +35,7 @@ struct LoginView: View {
 
                         if showGuestField && !guestsDisabled {
                             TextField("Guest name (optional)", text: $guestUsername)
-                                .textInputAutocapitalization(.never)
+                                .noAutocapitalization()
                                 .autocorrectionDisabled()
                                 .padding()
                                 .glassPanel(cornerRadius: 16)

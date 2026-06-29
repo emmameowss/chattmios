@@ -26,7 +26,7 @@ struct EmojiPickerPanel: View {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                     TextField("Search emoji", text: $query)
-                        .textInputAutocapitalization(.never)
+                        .noAutocapitalization()
                         .autocorrectionDisabled()
                 }
                 .padding(.horizontal, 10).padding(.vertical, 7)

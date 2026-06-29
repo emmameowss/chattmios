@@ -63,9 +63,9 @@ private struct ChatScreen: View {
                     .animation(.easeInOut(duration: 0.2), value: socket.serverStatus)
                 }
             .navigationTitle("chat™")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .leadingBar) {
                     Button { showSelfInfo = true } label: {
                         AvatarView(username: model.username, avatarURL: myProfile?.avatar, size: 30)
                     }
@@ -73,8 +73,8 @@ private struct ChatScreen: View {
                         SelfInfoPopover(username: model.username, profile: myProfile)
                     }
                 }
-                ToolbarItem(placement: .topBarLeading) { connectionBadge }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .leadingBar) { connectionBadge }
+                ToolbarItem(placement: .trailingBar) {
                     Button { showUserList = true } label: {
                         Label("\(socket.users.filter(\.online).count)", systemImage: "person.2.fill")
                             .labelStyle(.titleAndIcon)

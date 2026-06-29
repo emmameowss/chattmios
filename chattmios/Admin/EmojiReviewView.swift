@@ -47,7 +47,7 @@ struct EmojiReviewView: View {
             }
         }
         .navigationTitle("Emoji Queue")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .refreshable { await load() }
         .task { await load() }
         .sheet(item: $denyTarget) { emoji in
@@ -225,7 +225,7 @@ private struct DenyReasonSheet: View {
                 }
             }
             .navigationTitle("Deny Emoji")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

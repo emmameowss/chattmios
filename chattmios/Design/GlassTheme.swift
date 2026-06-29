@@ -61,6 +61,24 @@ struct GlassCard<Content: View>: View {
 }
 
 extension View {
+    /// `.navigationBarTitleDisplayMode(.inline)` on iOS; no-op on macOS.
+    func inlineNavigationTitle() -> some View {
+        #if os(iOS)
+        self.navigationBarTitleDisplayMode(.inline)
+        #else
+        self
+        #endif
+    }
+
+    /// `.noAutocapitalization()` on iOS; no-op on macOS.
+    func noAutocapitalization() -> some View {
+        #if os(iOS)
+        self.textInputAutocapitalization(.never)
+        #else
+        self
+        #endif
+    }
+
     /// Apply a glass background clipped to a rounded rect.
     func glassPanel(cornerRadius: CGFloat = 22, interactive: Bool = false) -> some View {
         let effect: Glass = interactive ? .regular.interactive() : .regular
@@ -71,6 +89,34 @@ extension View {
     func glassCapsule(interactive: Bool = true) -> some View {
         let effect: Glass = interactive ? .regular.interactive() : .regular
         return self.glassEffect(effect, in: .capsule)
+    }
+}
+
+extension Image {
+    /// Cross-platform init from a platform image type.
+    #if canImport(UIKit)
+    init(platformImage: UIImage) { self.init(uiImage: platformImage) }
+    #else
+    init(platformImage: NSImage) { self.init(nsImage: platformImage) }
+    #endif
+}
+
+extension ToolbarItemPlacement {
+    /// Leading bar on iOS; `.automatic` on macOS.
+    static var leadingBar: Self {
+        #if os(iOS)
+        .topBarLeading
+        #else
+        .automatic
+        #endif
+    }
+    /// Trailing bar on iOS; `.primaryAction` on macOS.
+    static var trailingBar: Self {
+        #if os(iOS)
+        .topBarTrailing
+        #else
+        .primaryAction
+        #endif
     }
 }
 

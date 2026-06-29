@@ -45,7 +45,7 @@ struct AdminView: View {
             }
         }
         .navigationTitle("Moderation")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .sheet(item: $actionSheet) { action in
             ModActionForm(action: action) { command in
                 run(command)

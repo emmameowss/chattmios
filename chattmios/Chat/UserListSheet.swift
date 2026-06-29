@@ -32,7 +32,7 @@ struct UserListSheet: View {
                 }
             }
             .navigationTitle("Members")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }

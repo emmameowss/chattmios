@@ -130,11 +130,7 @@ struct MessageComposer: View {
     private func pendingImagePreview(_ pending: PendingImage) -> some View {
         HStack(spacing: 0) {
             if let uiImage = pending.preview {
-                #if canImport(UIKit)
-                Image(uiImage: uiImage)
-                #else
-                Image(nsImage: uiImage)
-                #endif
+                Image(platformImage: uiImage)
                     .resizable().scaledToFill()
                     .frame(width: 64, height: 64)
                     .clipShape(.rect(cornerRadius: 10))

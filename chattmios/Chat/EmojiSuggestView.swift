@@ -40,11 +40,7 @@ struct EmojiSuggestView: View {
                         Spacer()
                         PhotosPicker(selection: $imageItem, matching: .images) {
                             if let img = imagePreview {
-                                #if canImport(UIKit)
-                                Image(uiImage: img)
-                                #else
-                                Image(nsImage: img)
-                                #endif
+                                Image(platformImage: img)
                                     .resizable().scaledToFit()
                                     .frame(width: 88, height: 88)
                                     .clipShape(.rect(cornerRadius: 14))
@@ -73,7 +69,7 @@ struct EmojiSuggestView: View {
                     HStack {
                         Text(":").foregroundStyle(.secondary).font(.dmMono(16))
                         TextField("name", text: $shortcode)
-                            .textInputAutocapitalization(.never)
+                            .noAutocapitalization()
                             .autocorrectionDisabled()
                             .font(.dmMono(16))
                             .onChange(of: shortcode) { _, v in
@@ -97,7 +93,7 @@ struct EmojiSuggestView: View {
                 }
             }
             .navigationTitle("Suggest Emoji")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

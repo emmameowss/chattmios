@@ -81,7 +81,7 @@ struct ProfileEditView: View {
                 }
             }
             .navigationTitle("Edit Profile")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("Save") { save() } }
@@ -99,7 +99,7 @@ struct ProfileEditView: View {
                         .padding()
                     }
                     .navigationTitle("Name Color")
-                    .navigationBarTitleDisplayMode(.inline)
+                    .inlineNavigationTitle()
                 }
                 .presentationDetents([.medium, .large])
             }

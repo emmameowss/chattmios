@@ -59,7 +59,7 @@ struct StatusDot: View {
         Circle()
             .fill(color)
             .frame(width: size, height: size)
-            .overlay(Circle().strokeBorder(Color(.systemBackground), lineWidth: 2))
+            .overlay(Circle().strokeBorder(Brand.background, lineWidth: 2))
     }
 }
 
