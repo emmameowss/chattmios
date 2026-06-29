@@ -4,6 +4,7 @@ import SwiftUI
 struct SelfInfoPopover: View {
     let username: String
     let profile: UserProfile?
+    @Environment(AuthManager.self) private var auth
 
     private var status: PresenceStatus { profile?.status ?? .online }
 
@@ -33,6 +34,16 @@ struct SelfInfoPopover: View {
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
             }
+
+            Divider()
+
+            Button(role: .destructive) {
+                Task { await auth.signOut() }
+            } label: {
+                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.glass)
         }
         .padding(20)
         .frame(minWidth: 230)
