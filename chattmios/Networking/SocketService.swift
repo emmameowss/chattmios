@@ -28,10 +28,10 @@ final class SocketService {
     private(set) var kickNotice: String?
     /// Set when the server goes into maintenance mode (session remains valid).
     private(set) var maintenanceNotice: String?
-    /// Transient moderation notices (muted/unmuted) — shown as an alert.
-    var notice: String?
     /// Inline toast shown near the composer; auto-dismisses after 3 s.
     var commandError: String?
+    /// Persistent mute notice; shown above the composer until unmuted.
+    private(set) var muteNotice: String?
     /// Persistent server status set by the owner via /status; shown above the composer.
     private(set) var serverStatus: String?
     /// Most recently received new message id (used to trigger sound/scroll).
@@ -75,6 +75,7 @@ final class SocketService {
         banNotice = nil
         kickNotice = nil
         maintenanceNotice = nil
+        muteNotice = nil
         serverStatus = nil
     }
 
@@ -136,6 +137,9 @@ final class SocketService {
             self.chatMuted = (dict["chatMuted"] as? Bool) ?? (dict["mutechat"] as? Bool) ?? false
             if let guests = dict["guestsAllowed"] as? Bool { self.guestsAllowed = guests }
             else if let noguests = dict["noguests"] as? Bool { self.guestsAllowed = !noguests }
+            if let uMuted = dict["uMuted"] as? [String: Any] {
+                self.muteNotice = Self.muteMessage(from: uMuted)
+            }
         }
 
         let emojiHandler: ([Any], SocketAckEmitter) -> Void = { [weak self] data, _ in
@@ -175,12 +179,15 @@ final class SocketService {
         }
 
         // Moderation / chat control
-        socket.on("mutechat") { [weak self] _, _ in self?.chatMuted = true; self?.notice = "Chat has been muted." }
-        socket.on("unmutechat") { [weak self] _, _ in self?.chatMuted = false; self?.notice = "Chat has been unmuted." }
+        socket.on("mutechat") { [weak self] _, _ in self?.chatMuted = true; self?.showToast("Chat has been muted.") }
+        socket.on("unmutechat") { [weak self] _, _ in self?.chatMuted = false; self?.showToast("Chat has been unmuted.") }
         socket.on("muted") { [weak self] data, _ in
-            self?.notice = Self.reason(from: data.first) ?? "You have been muted."
+            self?.muteNotice = Self.muteMessage(from: data.first)
         }
-        socket.on("unmuted") { [weak self] _, _ in self?.notice = "You have been unmuted." }
+        socket.on("unmuted") { [weak self] _, _ in
+            self?.muteNotice = nil
+            self?.showToast("you have been unmuted")
+        }
 
         // Forced disconnects
         socket.on("banned") { [weak self] data, _ in
@@ -321,6 +328,30 @@ final class SocketService {
         if let s = raw as? String, !s.isEmpty { return s }
         if let d = raw as? [String: Any] { return d["reason"] as? String }
         return nil
+    }
+
+    private static func muteMessage(from raw: Any?) -> String {
+        var reason: String?
+        var until: Date?
+        if let dict = raw as? [String: Any] {
+            reason = dict["reason"] as? String
+            if let ms = (dict["until"] as? Double) ?? (dict["until"] as? Int).map(Double.init) {
+                until = Date(timeIntervalSince1970: ms / 1000)
+            }
+        } else if let s = raw as? String, !s.isEmpty {
+            return s
+        }
+        var msg = "you are muted"
+        if let until {
+            let fmt = DateFormatter()
+            fmt.dateStyle = .short
+            fmt.timeStyle = .medium
+            msg += " until \(fmt.string(from: until))"
+        }
+        if let reason, !reason.isEmpty {
+            msg += " - reason: \(reason)"
+        }
+        return msg
     }
 
     /// Like reason(), but also checks message/text/error keys — used for status and commandError.

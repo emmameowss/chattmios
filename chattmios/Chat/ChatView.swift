@@ -47,8 +47,9 @@ private struct ChatScreen: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     let toast = socket.commandError
+                    let mute = socket.muteNotice
                     let status = socket.serverStatus
-                    if let msg = toast ?? status {
+                    if let msg = toast ?? mute ?? status {
                         Text(msg)
                             .font(.dmMono(13))
                             .foregroundStyle(Brand.accent)
@@ -58,6 +59,7 @@ private struct ChatScreen: View {
                     MessageComposer(model: model)
                 }
                 .animation(.easeInOut(duration: 0.2), value: socket.commandError)
+                .animation(.easeInOut(duration: 0.2), value: socket.muteNotice)
                 .animation(.easeInOut(duration: 0.2), value: socket.serverStatus)
             }
             .navigationTitle("chat™")
@@ -89,20 +91,11 @@ private struct ChatScreen: View {
             .sheet(item: $profileTarget) { target in
                 ProfileView(username: target.id)
             }
-            .alert("Notice", isPresented: noticeBinding) {
-                Button("OK", role: .cancel) { socket.notice = nil }
-            } message: {
-                Text(socket.notice ?? "")
-            }
             .task { socket.getProfile(model.username) }
             .onChange(of: socket.connection) { _, state in
                 if state == .connected { socket.getProfile(model.username) }
             }
         }
-    }
-
-    private var noticeBinding: Binding<Bool> {
-        Binding(get: { socket.notice != nil }, set: { if !$0 { socket.notice = nil } })
     }
 
     private var messageList: some View {
