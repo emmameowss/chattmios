@@ -148,9 +148,11 @@ private struct ChatScreen: View {
         case .connecting, .idle:
             HStack(spacing: 4) { ProgressView().controlSize(.mini); Text("Connecting").font(.caption2) }
                 .foregroundStyle(.secondary)
+                .lineLimit(1).fixedSize()
         case .disconnected, .failed:
             HStack(spacing: 4) { ProgressView().controlSize(.mini); Text("Reconnecting").font(.caption2) }
                 .foregroundStyle(.orange)
+                .lineLimit(1).fixedSize()
         }
     }
 
