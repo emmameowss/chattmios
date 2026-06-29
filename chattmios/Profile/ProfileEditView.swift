@@ -11,6 +11,7 @@ struct ProfileEditView: View {
     @State private var pronouns: String = ""
     @State private var bio: String = ""
     @State private var status: PresenceStatus = .online
+    @State private var localColor: String?
     @State private var avatarItem: PhotosPickerItem?
     @State private var avatarPreview: String?
     @State private var uploadingAvatar = false
@@ -69,7 +70,7 @@ struct ProfileEditView: View {
                             Text("Name Color").foregroundStyle(.primary)
                             Spacer()
                             ColoredName(name: username.isEmpty ? profile.username : username,
-                                        color: NameColor(raw: profile.color), fallback: .secondary)
+                                        color: NameColor(raw: localColor ?? profile.color), fallback: .secondary)
                         }
                     }
                 }
@@ -88,8 +89,10 @@ struct ProfileEditView: View {
             .sheet(isPresented: $showColorPicker) {
                 NavigationStack {
                     ScrollView {
-                        NameColorPicker(current: profile.color) { value in
+                        NameColorPicker(current: localColor ?? profile.color) { value in
+                            localColor = value
                             socket.sendCommand("/color \(value)", username: auth.currentUsername ?? username)
+                            socket.getProfile(auth.currentUsername ?? username)
                             showColorPicker = false
                             Haptics.success()
                         }
@@ -109,18 +112,21 @@ struct ProfileEditView: View {
                 pronouns = profile.pronouns
                 bio = profile.bio
                 status = profile.status == .offline ? .online : profile.status
+                localColor = profile.color
             }
         }
     }
 
     private func save() {
-        if username != profile.username, !username.trimmingCharacters(in: .whitespaces).isEmpty {
-            socket.setUsername(username)
-            auth.currentUsername = username
+        let effectiveName = username.trimmingCharacters(in: .whitespaces)
+        if !effectiveName.isEmpty, effectiveName != profile.username {
+            socket.setUsername(effectiveName)
+            auth.currentUsername = effectiveName
         }
         if pronouns != profile.pronouns { socket.setPronouns(pronouns) }
         if bio != profile.bio { socket.setBio(bio) }
         if status != profile.status { socket.setStatus(status) }
+        socket.getProfile(auth.currentUsername ?? profile.username)
         Haptics.success()
         dismiss()
     }

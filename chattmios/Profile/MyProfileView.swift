@@ -66,7 +66,7 @@ struct MyProfileView: View {
                         .disabled(auth.isGuest)
                 }
             }
-            .sheet(isPresented: $showEdit) {
+            .sheet(isPresented: $showEdit, onDismiss: { socket.getProfile(username) }) {
                 if let profile { ProfileEditView(profile: profile) }
             }
             .task { socket.getProfile(username) }
