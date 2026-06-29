@@ -35,9 +35,16 @@ enum Brand {
 extension Color {
     /// A color that resolves differently in light vs dark mode.
     static func dynamic(light: Color, dark: Color) -> Color {
+        #if canImport(UIKit)
         Color(UIColor { trait in
             trait.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light)
         })
+        #else
+        Color(NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(dark) : NSColor(light)
+        })
+        #endif
     }
 }
 

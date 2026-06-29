@@ -110,7 +110,14 @@ struct MessageRow: View {
         )
         .contextMenu {
             if let text = message.text, !text.isEmpty {
-                Button { UIPasteboard.general.string = text } label: {
+                Button {
+                    #if canImport(UIKit)
+                    UIPasteboard.general.string = text
+                    #else
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                    #endif
+                } label: {
                     Label("Copy", systemImage: "doc.on.doc")
                 }
             }

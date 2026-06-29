@@ -113,5 +113,9 @@ struct PendingImage {
     let data: Data
     let filename: String
     let mime: String
+    #if canImport(UIKit)
     var preview: UIImage? { UIImage(data: data) }
+    #else
+    var preview: NSImage? { NSImage(data: data) }
+    #endif
 }

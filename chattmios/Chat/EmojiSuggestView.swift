@@ -8,7 +8,11 @@ struct EmojiSuggestView: View {
     @State private var shortcode = ""
     @State private var notes = ""
     @State private var imageItem: PhotosPickerItem?
+    #if canImport(UIKit)
     @State private var imagePreview: UIImage?
+    #else
+    @State private var imagePreview: NSImage?
+    #endif
     @State private var imagePayload: (data: Data, ext: String, mime: String)?
     @State private var submitting = false
     @State private var errorMessage: String?
@@ -36,7 +40,11 @@ struct EmojiSuggestView: View {
                         Spacer()
                         PhotosPicker(selection: $imageItem, matching: .images) {
                             if let img = imagePreview {
+                                #if canImport(UIKit)
                                 Image(uiImage: img)
+                                #else
+                                Image(nsImage: img)
+                                #endif
                                     .resizable().scaledToFit()
                                     .frame(width: 88, height: 88)
                                     .clipShape(.rect(cornerRadius: 14))
@@ -120,7 +128,11 @@ struct EmojiSuggestView: View {
         guard let data = try? await item.loadTransferable(type: Data.self) else { return }
         let ext = item.supportedContentTypes.first?.preferredFilenameExtension ?? "png"
         let mime = item.supportedContentTypes.first?.preferredMIMEType ?? "image/png"
+        #if canImport(UIKit)
         let preview = UIImage(data: data)
+        #else
+        let preview = NSImage(data: data)
+        #endif
         imagePayload = (data, ext, mime)
         imagePreview = preview
     }
