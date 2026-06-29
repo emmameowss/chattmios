@@ -46,8 +46,19 @@ private struct ChatScreen: View {
                         TypingIndicatorView(names: Array(socket.typingUsers).sorted())
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    let toast = socket.commandError
+                    let status = socket.serverStatus
+                    if let msg = toast ?? status {
+                        Text(msg)
+                            .font(.dmMono(13))
+                            .foregroundStyle(Brand.accent)
+                            .multilineTextAlignment(.center)
+                            .transition(.opacity)
+                    }
                     MessageComposer(model: model)
                 }
+                .animation(.easeInOut(duration: 0.2), value: socket.commandError)
+                .animation(.easeInOut(duration: 0.2), value: socket.serverStatus)
             }
             .navigationTitle("chat™")
             .navigationBarTitleDisplayMode(.inline)

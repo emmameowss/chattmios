@@ -28,8 +28,12 @@ final class SocketService {
     private(set) var kickNotice: String?
     /// Set when the server goes into maintenance mode (session remains valid).
     private(set) var maintenanceNotice: String?
-    /// Transient moderation notices (muted/unmuted, etc.).
+    /// Transient moderation notices (muted/unmuted) — shown as an alert.
     var notice: String?
+    /// Inline toast shown near the composer; auto-dismisses after 3 s.
+    var commandError: String?
+    /// Persistent server status set by the owner via /status; shown above the composer.
+    private(set) var serverStatus: String?
     /// Most recently received new message id (used to trigger sound/scroll).
     private(set) var lastIncomingID: String?
 
@@ -37,6 +41,7 @@ final class SocketService {
     private var socket: SocketIOClient?
     private var session: String?
     private var typingExpiry: [String: Date] = [:]
+    private var commandErrorTask: Task<Void, Never>?
 
     var onNewMessage: ((Message) -> Void)?
 
@@ -70,6 +75,7 @@ final class SocketService {
         banNotice = nil
         kickNotice = nil
         maintenanceNotice = nil
+        serverStatus = nil
     }
 
     func reconnect() {
@@ -158,6 +164,16 @@ final class SocketService {
             self.typingExpiry[name] = nil
         }
 
+        // Server status (persistent notice set by /status command; also sent on connect)
+        socket.on("status") { [weak self] data, _ in
+            let text = Self.message(from: data.first) ?? ""
+            self?.serverStatus = text.isEmpty ? nil : text
+        }
+        // Command feedback (auto-dismisses after 3 s)
+        socket.on("commandError") { [weak self] data, _ in
+            self?.showToast(Self.message(from: data.first) ?? "Command failed.")
+        }
+
         // Moderation / chat control
         socket.on("mutechat") { [weak self] _, _ in self?.chatMuted = true; self?.notice = "Chat has been muted." }
         socket.on("unmutechat") { [weak self] _, _ in self?.chatMuted = false; self?.notice = "Chat has been unmuted." }
@@ -194,6 +210,17 @@ final class SocketService {
         for (name, expiry) in typingExpiry where expiry < now {
             typingUsers.remove(name)
             typingExpiry[name] = nil
+        }
+    }
+
+    // MARK: Toast
+
+    private func showToast(_ msg: String) {
+        commandError = msg
+        commandErrorTask?.cancel()
+        commandErrorTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            self?.commandError = nil
         }
     }
 
@@ -293,6 +320,17 @@ final class SocketService {
     private static func reason(from raw: Any?) -> String? {
         if let s = raw as? String, !s.isEmpty { return s }
         if let d = raw as? [String: Any] { return d["reason"] as? String }
+        return nil
+    }
+
+    /// Like reason(), but also checks message/text/error keys — used for status and commandError.
+    private static func message(from raw: Any?) -> String? {
+        if let s = raw as? String, !s.isEmpty { return s }
+        if let d = raw as? [String: Any] {
+            for key in ["message", "text", "error", "reason"] {
+                if let s = d[key] as? String, !s.isEmpty { return s }
+            }
+        }
         return nil
     }
 }
