@@ -42,6 +42,8 @@ final class SocketService {
     private var session: String?
     private var typingExpiry: [String: Date] = [:]
     private var commandErrorTask: Task<Void, Never>?
+    private var reconnectTask: Task<Void, Never>?
+    private var reconnectDelay: TimeInterval = 2
 
     var onNewMessage: ((Message) -> Void)?
 
@@ -56,8 +58,7 @@ final class SocketService {
             .log(false),
             .compress,
             .forceWebsockets(true),
-            .reconnects(true),
-            .reconnectWait(2),
+            .reconnects(false),
             .extraHeaders(["Origin": Server.origin]),
         ])
         self.manager = manager
@@ -68,6 +69,9 @@ final class SocketService {
     }
 
     func disconnect() {
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        session = nil
         socket?.disconnect()
         socket = nil
         manager = nil
@@ -81,10 +85,27 @@ final class SocketService {
 
     func reconnect() {
         guard let session else { return }
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        reconnectDelay = 2
         socket?.disconnect()
         socket = nil
         manager = nil
         connect(session: session)
+    }
+
+    private func scheduleReconnect() {
+        guard session != nil else { return }
+        reconnectTask?.cancel()
+        let delay = reconnectDelay
+        reconnectDelay = min(reconnectDelay * 2, 30)
+        reconnectTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled, let self else { return }
+            if case .connecting = self.connection { return }
+            if case .connected = self.connection { return }
+            self.reconnect()
+        }
     }
 
     // MARK: Handlers
@@ -93,6 +114,9 @@ final class SocketService {
         socket.on(clientEvent: .connect) { [weak self] _, _ in
             guard let self else { return }
             self.connection = .connected
+            self.reconnectDelay = 2
+            self.reconnectTask?.cancel()
+            self.reconnectTask = nil
             self.banNotice = nil
             self.kickNotice = nil
             self.maintenanceNotice = nil
@@ -100,11 +124,12 @@ final class SocketService {
         }
         socket.on(clientEvent: .disconnect) { [weak self] _, _ in
             self?.connection = .disconnected
+            self?.scheduleReconnect()
         }
         socket.on(clientEvent: .error) { [weak self] data, _ in
             guard let self else { return }
-            let reason = (data.first as? String) ?? "Connection error"
-            self.connection = .failed(reason)
+            self.connection = .failed((data.first as? String) ?? "Connection error")
+            self.scheduleReconnect()
         }
 
         socket.on("history") { [weak self] data, _ in

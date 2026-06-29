@@ -143,10 +143,9 @@ private struct ChatScreen: View {
         case .connecting, .idle:
             HStack(spacing: 4) { ProgressView().controlSize(.mini); Text("Connecting").font(.caption2) }
                 .foregroundStyle(.secondary)
-        case .disconnected:
-            Label("Reconnecting", systemImage: "wifi.exclamationmark").font(.caption2).foregroundStyle(.orange)
-        case .failed:
-            Label("Offline", systemImage: "wifi.slash").font(.caption2).foregroundStyle(.red)
+        case .disconnected, .failed:
+            HStack(spacing: 4) { ProgressView().controlSize(.mini); Text("Reconnecting").font(.caption2) }
+                .foregroundStyle(.orange)
         }
     }
 
