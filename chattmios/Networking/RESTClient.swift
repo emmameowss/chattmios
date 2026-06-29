@@ -179,12 +179,15 @@ final class RESTClient: NSObject, URLSessionTaskDelegate {
         return (obj["autoApproved"] as? Bool) ?? false
     }
 
-    func reviewEmoji(id: String, accept: Bool, session: String) async throws {
+    func reviewEmoji(id: String, accept: Bool, reason: String? = nil, session: String) async throws {
         let url = Server.url(accept ? "admin/emoji/accept" : "admin/emoji/deny")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["id": id, "session": session])
+        req.setValue(Server.origin, forHTTPHeaderField: "Origin")
+        var body: [String: Any] = ["id": id, "session": session]
+        if let reason, !reason.isEmpty { body["reason"] = reason }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (_, response) = try await self.session.data(for: req)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw ServerError.badResponse((response as? HTTPURLResponse)?.statusCode ?? 0)
