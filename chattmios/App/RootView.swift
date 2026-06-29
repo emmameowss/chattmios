@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(AuthManager.self) private var auth
     @Environment(SocketService.self) private var socket
+    @State private var signInID = 0
 
     var body: some View {
         Group {
@@ -14,6 +15,7 @@ struct RootView: View {
                     .transition(.opacity)
             case .signedIn:
                 MainTabView()
+                    .id(signInID)
                     .transition(.opacity)
                     .overlay {
                         if let notice = socket.banNotice {
@@ -46,6 +48,7 @@ struct RootView: View {
         }
         .onChange(of: auth.state) { _, newValue in
             if newValue == .signedIn, let session = auth.session {
+                signInID += 1
                 socket.connect(session: session)
             } else if newValue == .signedOut {
                 socket.disconnect()
