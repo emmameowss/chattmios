@@ -150,7 +150,10 @@ private struct ChatScreen: View {
     }
 
     private func isOwner(username: String) -> Bool {
-        socket.users.contains { $0.isOwner && $0.username.caseInsensitiveCompare(username) == .orderedSame }
+        if let user = socket.users.first(where: { $0.username.caseInsensitiveCompare(username) == .orderedSame }) {
+            return user.isOwner
+        }
+        return socket.profiles[username]?.isOwner ?? false
     }
 
     private func showsHeader(at index: Int) -> Bool {

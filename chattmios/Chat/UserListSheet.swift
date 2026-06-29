@@ -10,13 +10,24 @@ struct UserListSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section("Online — \(online.count)") {
-                    ForEach(online) { user in row(user) }
-                }
-                if !offline.isEmpty {
-                    Section("Offline — \(offline.count)") {
-                        ForEach(offline) { user in row(user) }
+            Group {
+                if socket.users.isEmpty && socket.connection == .connected {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Loading members…")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List {
+                        Section("Online — \(online.count)") {
+                            ForEach(online) { user in row(user) }
+                        }
+                        if !offline.isEmpty {
+                            Section("Offline — \(offline.count)") {
+                                ForEach(offline) { user in row(user) }
+                            }
+                        }
                     }
                 }
             }

@@ -59,11 +59,11 @@ struct Message: Identifiable, Equatable {
         self.text = dict["text"] as? String
         self.time = Message.parseTime(dict["time"])
         self.ownerEmail = dict["ownerEmail"] as? String
-        self.isToken = (dict["isToken"] as? Bool) ?? false
-        self.isGuest = (dict["isGuest"] as? Bool) ?? false
+        self.isToken = ChatUserSummary.parseBool(dict["isToken"]) ?? false
+        self.isGuest = ChatUserSummary.parseBool(dict["isGuest"]) ?? false
         self.color = dict["color"] as? String
         self.avatar = dict["avatar"] as? String
-        self.verified = (dict["verified"] as? Bool) ?? false
+        self.verified = ChatUserSummary.parseBool(dict["verified"]) ?? false
         self.mentions = (dict["mentions"] as? [String]) ?? []
         self.image = dict["image"] as? String
         self.system = (dict["system"] as? Bool) ?? (dict["isSystem"] as? Bool) ?? false

@@ -28,10 +28,10 @@ struct UserProfile: Equatable {
         } else {
             self.status = .offline
         }
-        self.verified = (dict["verified"] as? Bool) ?? false
-        self.isOwner = (dict["isOwner"] as? Bool) ?? false
-        self.isGuest = (dict["isGuest"] as? Bool) ?? false
-        self.online = (dict["online"] as? Bool) ?? false
+        self.verified = ChatUserSummary.parseBool(dict["verified"]) ?? false
+        self.isOwner = ChatUserSummary.parseBool(dict["isOwner"]) ?? false
+        self.isGuest = ChatUserSummary.parseBool(dict["isGuest"]) ?? false
+        self.online = ChatUserSummary.parseBool(dict["online"]) ?? false
         if let ls = dict["lastSeen"], !(ls is NSNull) {
             self.lastSeen = Message.parseTime(ls)
         }

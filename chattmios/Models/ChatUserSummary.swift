@@ -33,20 +33,29 @@ struct ChatUserSummary: Identifiable, Equatable {
     init?(dict: [String: Any]) {
         guard let username = dict["username"] as? String else { return nil }
         self.username = username
-        let online = (dict["online"] as? Bool) ?? true
+        let online = Self.parseBool(dict["online"]) ?? true
         self.online = online
         if let raw = dict["status"] as? String, let s = PresenceStatus(rawValue: raw) {
             self.status = s
         } else {
             self.status = online ? .online : .offline
         }
-        self.isOwner = (dict["isOwner"] as? Bool) ?? (dict["owner"] as? Bool) ?? false
-        self.isGuest = (dict["isGuest"] as? Bool) ?? (dict["guest"] as? Bool) ?? false
-        self.verified = (dict["verified"] as? Bool) ?? false
+        self.isOwner = Self.parseBool(dict["isOwner"]) ?? Self.parseBool(dict["owner"]) ?? false
+        self.isGuest = Self.parseBool(dict["isGuest"]) ?? Self.parseBool(dict["guest"]) ?? false
+        self.verified = Self.parseBool(dict["verified"]) ?? false
         self.color = dict["color"] as? String
         self.avatar = dict["avatar"] as? String
         if let ls = dict["lastSeen"] {
             self.lastSeen = Message.parseTime(ls)
         }
+    }
+
+    /// Handles JSON booleans AND integer 0/1 from SQLite-backed servers.
+    static func parseBool(_ value: Any?) -> Bool? {
+        if let b = value as? Bool { return b }
+        if let n = value as? Int { return n != 0 }
+        if let n = value as? Double { return n != 0 }
+        if value is NSNull { return nil }
+        return nil
     }
 }
