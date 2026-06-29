@@ -12,6 +12,7 @@ final class ChatViewModel {
     var pendingImage: PendingImage?
     var isUploading = false
     var uploadError: String?
+    var focusRequest = false
 
     private var typingTask: Task<Void, Never>?
     private var isTyping = false

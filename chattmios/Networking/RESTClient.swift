@@ -42,7 +42,11 @@ final class RESTClient: NSObject, URLSessionTaskDelegate {
         let (data, response) = try await noRedirectSession.data(for: req)
         guard let http = response as? HTTPURLResponse else { throw ServerError.badResponse(0) }
         if (300...399).contains(http.statusCode) {
-            if let session = sessionFromLocation(http.value(forHTTPHeaderField: "Location")) {
+            let location = http.value(forHTTPHeaderField: "Location") ?? ""
+            if location.contains("guests_disabled") {
+                throw ServerError.message("Guest sign-in is currently disabled.")
+            }
+            if let session = sessionFromLocation(location) {
                 return session
             }
         }
@@ -68,6 +72,11 @@ final class RESTClient: NSObject, URLSessionTaskDelegate {
     func signOut(session: String) async {
         let url = Server.url("signout", query: [.init(name: "session", value: session)])
         _ = try? await self.session.data(from: url)
+    }
+
+    func maintenance() async throws -> MaintenanceInfo {
+        let (data, _) = try await session.data(from: Server.url("maintenance"))
+        return try JSONDecoder().decode(MaintenanceInfo.self, from: data)
     }
 
     func stats() async throws -> ServerStats {

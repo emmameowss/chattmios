@@ -112,7 +112,12 @@ private struct ChatScreen: View {
                             canModerate: socket.isOwner,
                             onProfile: { profileTarget = ProfileTarget(id: $0) },
                             onDelete: { model.delete($0) },
-                            onImage: { imageURL = IdentifiableURL(url: $0) }
+                            onImage: { imageURL = IdentifiableURL(url: $0) },
+                            onMention: { username in
+                                let prefix = model.composerText.isEmpty ? "" : model.composerText.hasSuffix(" ") ? "" : " "
+                                model.composerText += "\(prefix)@\(username) "
+                                model.focusRequest = true
+                            }
                         )
                         .id(message.id)
                     }

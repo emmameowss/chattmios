@@ -11,6 +11,9 @@ struct MessageRow: View {
     var onProfile: (String) -> Void
     var onDelete: (Message) -> Void
     var onImage: (URL) -> Void
+    var onMention: (String) -> Void
+
+    @GestureState private var swipeOffset: CGFloat = 0
 
     private var isMine: Bool {
         message.username.caseInsensitiveCompare(currentUsername ?? "") == .orderedSame
@@ -76,6 +79,34 @@ struct MessageRow: View {
         .background(
             mentionsMe ? Brand.accent.opacity(0.10) : Color.clear,
             in: .rect(cornerRadius: 10)
+        )
+        .offset(x: swipeOffset)
+        .overlay(alignment: .leading) {
+            Image(systemName: "at")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Brand.accent)
+                .padding(6)
+                .background(Brand.accent.opacity(0.15), in: Circle())
+                .scaleEffect(min(swipeOffset / 50, 1))
+                .opacity(min(swipeOffset / 40, 1))
+                .offset(x: swipeOffset * 0.25 - 28)
+                .animation(.interactiveSpring, value: swipeOffset)
+        }
+        .gesture(
+            DragGesture(minimumDistance: 15, coordinateSpace: .local)
+                .updating($swipeOffset) { value, state, _ in
+                    let h = value.translation.width
+                    let v = value.translation.height
+                    guard h > 0, abs(h) > abs(v) * 1.2 else { return }
+                    state = min(h * 0.4, 70)
+                }
+                .onEnded { value in
+                    let h = value.translation.width
+                    let v = value.translation.height
+                    guard h > 60, abs(h) > abs(v) * 1.2 else { return }
+                    Haptics.tap()
+                    onMention(message.username)
+                }
         )
         .contextMenu {
             if let text = message.text, !text.isEmpty {

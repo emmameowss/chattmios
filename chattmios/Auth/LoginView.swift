@@ -7,6 +7,7 @@ struct LoginView: View {
     @State private var showGuestField = false
     @State private var showWebAuth = false
     @State private var isWorking = false
+    @State private var guestsDisabled = false
 
     var body: some View {
         ZStack {
@@ -32,7 +33,7 @@ struct LoginView: View {
                         }
                         .buttonStyle(.glassProminent)
 
-                        if showGuestField {
+                        if showGuestField && !guestsDisabled {
                             TextField("Guest name (optional)", text: $guestUsername)
                                 .textInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
@@ -53,7 +54,14 @@ struct LoginView: View {
                                 .padding(.vertical, 6)
                         }
                         .buttonStyle(.glass)
-                        .disabled(isWorking)
+                        .disabled(isWorking || guestsDisabled)
+
+                        if guestsDisabled {
+                            Text("Guest sign-in is currently disabled.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
                     }
                 }
                 .padding(.horizontal, 28)
@@ -75,6 +83,11 @@ struct LoginView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
                     .padding(.bottom, 8)
+            }
+        }
+        .task {
+            if let info = try? await RESTClient.shared.maintenance() {
+                guestsDisabled = info.guestsDisabled
             }
         }
         .sheet(isPresented: $showWebAuth) {

@@ -16,6 +16,23 @@ struct ServerStats: Decodable {
     }
 }
 
+/// Response from `GET /maintenance`.
+struct MaintenanceInfo: Decodable {
+    var maintenance: Bool
+    var reason: String?
+    var guestsDisabled: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case maintenance, reason, guestsDisabled
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        maintenance = (try? c.decode(Bool.self, forKey: .maintenance)) ?? false
+        reason = try? c.decode(String.self, forKey: .reason)
+        guestsDisabled = (try? c.decode(Bool.self, forKey: .guestsDisabled)) ?? false
+    }
+}
+
 /// Response from `GET /version`.
 struct VersionInfo: Decodable {
     var upToDate: Bool?

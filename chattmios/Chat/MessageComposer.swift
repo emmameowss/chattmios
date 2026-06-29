@@ -88,6 +88,19 @@ struct MessageComposer: View {
         }
         .padding(.horizontal, 10)
         .padding(.bottom, 4)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 20)
+                .onChanged { value in
+                    guard focused,
+                          value.translation.height > 30,
+                          abs(value.translation.height) > abs(value.translation.width) else { return }
+                    focused = false
+                    Haptics.tap()
+                }
+        )
+        .onChange(of: model.focusRequest) { _, requested in
+            if requested { focused = true; model.focusRequest = false }
+        }
         .onChange(of: photoItem) { _, newValue in
             guard let newValue else { return }
             Task { await attachPhoto(newValue); photoItem = nil }
