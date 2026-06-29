@@ -15,6 +15,7 @@ final class SocketService {
     private(set) var connection: ConnectionState = .idle
     private(set) var messages: [Message] = []
     private(set) var users: [ChatUserSummary] = []
+    private(set) var usersLoaded = false
     private(set) var emojiMap: [String: String] = [:]
     private(set) var profiles: [String: UserProfile] = [:]
     private(set) var typingUsers: Set<String> = []
@@ -81,6 +82,7 @@ final class SocketService {
         maintenanceNotice = nil
         muteNotice = nil
         serverStatus = nil
+        usersLoaded = false
     }
 
     func reconnect() {
@@ -121,9 +123,19 @@ final class SocketService {
             self.kickNotice = nil
             self.maintenanceNotice = nil
             socket.emit("userActive")
+            // Trigger emitUserList() on the server — it only fires automatically
+            // for guest connections, not HCA users, so we nudge it with setStatus.
+            socket.emit("setStatus", "online")
+            // Fallback: stop the spinner after 4 s if userlist never arrives.
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(4))
+                guard let self, !self.usersLoaded else { return }
+                self.usersLoaded = true
+            }
         }
         socket.on(clientEvent: .disconnect) { [weak self] _, _ in
             self?.connection = .disconnected
+            self?.usersLoaded = false
             self?.scheduleReconnect()
         }
         socket.on(clientEvent: .error) { [weak self] data, _ in
@@ -154,6 +166,7 @@ final class SocketService {
         socket.on("userlist") { [weak self] data, _ in
             guard let self, let raw = data.first else { return }
             self.users = Self.parseUserlist(raw)
+            self.usersLoaded = true
         }
 
         socket.on("init") { [weak self] data, _ in

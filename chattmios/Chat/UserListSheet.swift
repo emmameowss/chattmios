@@ -11,7 +11,7 @@ struct UserListSheet: View {
     var body: some View {
         NavigationStack {
             Group {
-                if socket.users.isEmpty && socket.connection == .connected {
+                if !socket.usersLoaded {
                     VStack(spacing: 12) {
                         ProgressView()
                         Text("Loading members…")

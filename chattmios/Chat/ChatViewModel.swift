@@ -9,6 +9,7 @@ final class ChatViewModel {
     let settings: AppSettings
 
     var composerText = ""
+    var pendingImage: PendingImage?
     var isUploading = false
     var uploadError: String?
 
@@ -34,31 +35,43 @@ final class ChatViewModel {
     var username: String { auth.currentUsername ?? "guest" }
     var canModerate: Bool { socket.isOwner }
 
-    func send() {
-        let trimmed = composerText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        composerText = ""
-        stopTyping()
-        if trimmed.hasPrefix("/") {
-            socket.sendCommand(trimmed, username: username)
-        } else {
-            socket.sendMessage(text: trimmed, username: username)
-        }
-        Haptics.tap()
+    func attachImage(data: Data, filename: String, mime: String) {
+        pendingImage = PendingImage(data: data, filename: filename, mime: mime)
+        uploadError = nil
     }
 
-    func sendImage(data: Data, filename: String, mime: String) async {
+    func send() {
+        let trimmed = composerText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty || pendingImage != nil else { return }
+
+        let caption = trimmed.isEmpty ? nil : trimmed
+        let attachment = pendingImage
+        composerText = ""
+        pendingImage = nil
+        stopTyping()
+
+        if let attachment {
+            Task { await upload(attachment, caption: caption) }
+        } else if let caption {
+            if caption.hasPrefix("/") {
+                socket.sendCommand(caption, username: username)
+            } else {
+                socket.sendMessage(text: caption, username: username)
+            }
+            Haptics.tap()
+        }
+    }
+
+    private func upload(_ image: PendingImage, caption: String?) async {
         guard let session = auth.session else { return }
         isUploading = true
         uploadError = nil
         defer { isUploading = false }
         do {
             let url = try await RESTClient.shared.upload(
-                data: data, filename: filename, mimeType: mime,
+                data: image.data, filename: image.filename, mimeType: image.mime,
                 username: username, session: session, avatar: false)
-            let caption = composerText.trimmingCharacters(in: .whitespacesAndNewlines)
-            socket.sendMessage(text: caption.isEmpty ? nil : caption, image: url, username: username)
-            composerText = ""
+            socket.sendMessage(text: caption, image: url, username: username)
             Haptics.success()
         } catch {
             uploadError = error.localizedDescription
@@ -93,4 +106,11 @@ final class ChatViewModel {
             socket.setTyping(false)
         }
     }
+}
+
+struct PendingImage {
+    let data: Data
+    let filename: String
+    let mime: String
+    var preview: UIImage? { UIImage(data: data) }
 }

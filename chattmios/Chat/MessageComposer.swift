@@ -23,6 +23,9 @@ struct MessageComposer: View {
             if let error = model.uploadError {
                 Text(error).font(.caption).foregroundStyle(.red)
             }
+            if let pending = model.pendingImage {
+                pendingImagePreview(pending)
+            }
             if !suggestions.isEmpty {
                 suggestionBar
             }
@@ -87,7 +90,7 @@ struct MessageComposer: View {
         .padding(.bottom, 4)
         .onChange(of: photoItem) { _, newValue in
             guard let newValue else { return }
-            Task { await handlePhoto(newValue); photoItem = nil }
+            Task { await attachPhoto(newValue); photoItem = nil }
         }
         .sheet(isPresented: $showEmojiSuggest) { EmojiSuggestView() }
     }
@@ -107,6 +110,30 @@ struct MessageComposer: View {
 
     private var canSend: Bool {
         !model.composerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || model.pendingImage != nil
+    }
+
+    @ViewBuilder
+    private func pendingImagePreview(_ pending: PendingImage) -> some View {
+        HStack(spacing: 0) {
+            if let uiImage = pending.preview {
+                Image(uiImage: uiImage)
+                    .resizable().scaledToFill()
+                    .frame(width: 64, height: 64)
+                    .clipShape(.rect(cornerRadius: 10))
+                    .overlay(alignment: .topTrailing) {
+                        Button { model.pendingImage = nil } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 18))
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(.white, Color(.systemGray))
+                        }
+                        .offset(x: 6, y: -6)
+                    }
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 14)
     }
 
     private var suggestionBar: some View {
@@ -146,10 +173,10 @@ struct MessageComposer: View {
         }
     }
 
-    private func handlePhoto(_ item: PhotosPickerItem) async {
+    private func attachPhoto(_ item: PhotosPickerItem) async {
         guard let data = try? await item.loadTransferable(type: Data.self) else { return }
         let ext = item.supportedContentTypes.first?.preferredFilenameExtension ?? "jpg"
         let mime = item.supportedContentTypes.first?.preferredMIMEType ?? "image/jpeg"
-        await model.sendImage(data: data, filename: "upload.\(ext)", mime: mime)
+        model.attachImage(data: data, filename: "upload.\(ext)", mime: mime)
     }
 }
