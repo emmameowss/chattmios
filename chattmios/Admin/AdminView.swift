@@ -8,6 +8,7 @@ struct AdminView: View {
 
     @State private var actionSheet: ModAction?
     @State private var confirmation: String?
+    @State private var showEmojiReview = false
 
     private var me: String { auth.currentUsername ?? "owner" }
 
@@ -38,15 +39,10 @@ struct AdminView: View {
             Section("Custom Emoji") {
                 actionRow(.addEmoji); actionRow(.removeEmoji)
                 quickRow("Reload emoji", icon: "arrow.clockwise") { run("/reloademojis") }
-                NavigationLink {
-                    EmojiReviewView()
-                } label: {
-                    Label("Review submissions", systemImage: "tray.full")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .tint(nil)
+                quickRow("Review submissions", icon: "tray.full") { showEmojiReview = true }
             }
         }
+        .navigationDestination(isPresented: $showEmojiReview) { EmojiReviewView() }
         .listStyle(.inset)
         .macOSReadableWidth(560)
         .navigationTitle("Moderation")
