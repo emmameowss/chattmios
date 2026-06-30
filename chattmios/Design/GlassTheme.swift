@@ -79,6 +79,24 @@ extension View {
         #endif
     }
 
+    /// Forces the view to fill all available space — needed on macOS where views size to content by default.
+    func fillAvailableSpace() -> some View {
+        #if os(macOS)
+        self.frame(maxWidth: .infinity, maxHeight: .infinity)
+        #else
+        self
+        #endif
+    }
+
+    /// Caps content to a readable max width on macOS and centers it in the available space.
+    func macOSReadableWidth(_ max: CGFloat = 480) -> some View {
+        #if os(macOS)
+        self.frame(maxWidth: max).frame(maxWidth: .infinity)
+        #else
+        self
+        #endif
+    }
+
     /// Apply a glass background clipped to a rounded rect.
     func glassPanel(cornerRadius: CGFloat = 22, interactive: Bool = false) -> some View {
         let effect: Glass = interactive ? .regular.interactive() : .regular

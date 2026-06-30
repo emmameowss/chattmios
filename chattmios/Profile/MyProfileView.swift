@@ -13,49 +13,52 @@ struct MyProfileView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                if let profile {
-                    ProfileHeader(profile: profile)
-                    ProfileDetails(profile: profile, showStatus: false)
-                } else {
-                    VStack(spacing: 12) {
-                        AvatarView(username: username, avatarURL: nil, size: 110)
-                        Text(username).font(.title2.bold())
-                        if auth.isGuest {
-                            Text("You're browsing as a guest.")
-                                .font(.subheadline).foregroundStyle(.secondary)
+                VStack(spacing: 12) {
+                    if let profile {
+                        ProfileHeader(profile: profile)
+                        ProfileDetails(profile: profile, showStatus: false)
+                    } else {
+                        VStack(spacing: 12) {
+                            AvatarView(username: username, avatarURL: nil, size: 110)
+                            Text(username).font(.title2.bold())
+                            if auth.isGuest {
+                                Text("You're browsing as a guest.")
+                                    .font(.subheadline).foregroundStyle(.secondary)
+                            }
                         }
+                        .frame(maxWidth: .infinity).padding(.vertical, 24)
                     }
-                    .frame(maxWidth: .infinity).padding(.vertical, 24)
-                }
 
-                // Quick status control, available to everyone.
-                GlassCard {
-                    HStack {
-                        Label("Status", systemImage: "circle.fill")
-                            .foregroundStyle(StatusDot(status: status).color)
-                        Spacer()
-                        Picker("Status", selection: $status) {
-                            Text("Online").tag(PresenceStatus.online)
-                            Text("Idle").tag(PresenceStatus.idle)
-                            Text("Do Not Disturb").tag(PresenceStatus.dnd)
-                        }
-                        .pickerStyle(.menu)
-                        .tint(Brand.accent)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(.horizontal)
-
-                if auth.isGuest {
                     GlassCard {
-                        Label("Sign in with Hack Club to customize your profile, set an avatar, and keep your name.",
-                              systemImage: "info.circle")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HStack {
+                            Label("Status", systemImage: "circle.fill")
+                                .foregroundStyle(StatusDot(status: status).color)
+                            Spacer()
+                            Picker("Status", selection: $status) {
+                                Text("Online").tag(PresenceStatus.online)
+                                Text("Idle").tag(PresenceStatus.idle)
+                                Text("Do Not Disturb").tag(PresenceStatus.dnd)
+                            }
+                            .pickerStyle(.menu)
+                            .tint(Brand.accent)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding(.horizontal)
+
+                    if auth.isGuest {
+                        GlassCard {
+                            Label("Sign in with Hack Club to customize your profile, set an avatar, and keep your name.",
+                                  systemImage: "info.circle")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.horizontal)
+                    }
                 }
+                .macOSReadableWidth()
+                .frame(maxWidth: .infinity)
             }
             .navigationTitle("Profile")
             .toolbar {
@@ -78,5 +81,6 @@ struct MyProfileView: View {
                 socket.setStatus(newValue)
             }
         }
+        .fillAvailableSpace()
     }
 }

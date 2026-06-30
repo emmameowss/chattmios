@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UniformTypeIdentifiers
 
 struct EmojiSuggestView: View {
     @Environment(AuthManager.self) private var auth
@@ -7,7 +8,11 @@ struct EmojiSuggestView: View {
 
     @State private var shortcode = ""
     @State private var notes = ""
+    #if os(macOS)
+    @State private var showImagePicker = false
+    #else
     @State private var imageItem: PhotosPickerItem?
+    #endif
     #if canImport(UIKit)
     @State private var imagePreview: UIImage?
     #else
@@ -33,105 +38,165 @@ struct EmojiSuggestView: View {
     private var canSubmit: Bool { codeValid && imagePayload != nil && !submitting }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    HStack {
-                        Spacer()
-                        PhotosPicker(selection: $imageItem, matching: .images) {
-                            if let img = imagePreview {
-                                Image(platformImage: img)
-                                    .resizable().scaledToFit()
-                                    .frame(width: 88, height: 88)
-                                    .clipShape(.rect(cornerRadius: 14))
-                            } else {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .fill(.quaternary)
-                                        .frame(width: 88, height: 88)
-                                    VStack(spacing: 6) {
-                                        Image(systemName: "photo.badge.plus")
-                                            .font(.largeTitle)
-                                            .foregroundStyle(Brand.accent)
-                                        Text("Tap to choose")
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                        }
-                        Spacer()
-                    }
-                    .listRowBackground(Color.clear)
-                }
-
-                Section("Shortcode") {
-                    HStack {
-                        Text(":").foregroundStyle(.secondary).font(.dmMono(16))
-                        TextField("name", text: $shortcode)
-                            .noAutocapitalization()
-                            .autocorrectionDisabled()
-                            .font(.dmMono(16))
-                            .onChange(of: shortcode) { _, v in
-                                shortcode = v.filter { $0 != ":" }
-                            }
-                        Text(":").foregroundStyle(.secondary).font(.dmMono(16))
-                    }
-                }
-
-                Section {
-                    TextField("Notes (optional)", text: $notes, axis: .vertical)
-                        .lineLimit(2...4)
-                }
-
-                if let errorMessage {
-                    Section {
-                        Text(errorMessage)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                    }
-                }
-            }
-            .navigationTitle("Suggest Emoji")
-            .inlineNavigationTitle()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
+        #if os(macOS)
+        VStack(spacing: 0) {
+            HStack {
+                Button("Cancel") { dismiss() }
+                Spacer()
+                Text("Suggest Emoji").font(.headline)
+                Spacer()
+                Group {
                     if submitting {
-                        ProgressView()
+                        ProgressView().controlSize(.small)
                     } else {
                         Button("Submit") { submit() }.disabled(!canSubmit)
                     }
                 }
+                .frame(width: 60, alignment: .trailing)
             }
-            .onChange(of: imageItem) { _, item in
-                guard let item else { return }
-                Task { await loadImage(item) }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            Divider()
+            formContent
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(minWidth: 400, minHeight: 380)
+        #else
+        NavigationStack {
+            formContent
+                .navigationTitle("Suggest Emoji")
+                .inlineNavigationTitle()
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                    ToolbarItem(placement: .confirmationAction) {
+                        if submitting { ProgressView() } else {
+                            Button("Submit") { submit() }.disabled(!canSubmit)
+                        }
+                    }
+                }
+        }
+        #endif
+    }
+
+    private var formContent: some View {
+        Form {
+            Section {
+                HStack {
+                    Spacer()
+                    #if os(macOS)
+                    Button { showImagePicker = true } label: {
+                        if let img = imagePreview {
+                            Image(platformImage: img)
+                                .resizable().scaledToFit()
+                                .frame(width: 88, height: 88)
+                                .clipShape(.rect(cornerRadius: 14))
+                        } else {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(.quaternary)
+                                    .frame(width: 88, height: 88)
+                                VStack(spacing: 6) {
+                                    Image(systemName: "photo.badge.plus")
+                                        .font(.largeTitle)
+                                        .foregroundStyle(Brand.accent)
+                                    Text("Click to choose")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .fileImporter(isPresented: $showImagePicker, allowedContentTypes: [.image]) { result in
+                        if case .success(let url) = result { Task { await loadFile(url) } }
+                    }
+                    #else
+                    PhotosPicker(selection: $imageItem, matching: .images) {
+                        if let img = imagePreview {
+                            Image(platformImage: img)
+                                .resizable().scaledToFit()
+                                .frame(width: 88, height: 88)
+                                .clipShape(.rect(cornerRadius: 14))
+                        } else {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(.quaternary)
+                                    .frame(width: 88, height: 88)
+                                VStack(spacing: 6) {
+                                    Image(systemName: "photo.badge.plus")
+                                        .font(.largeTitle)
+                                        .foregroundStyle(Brand.accent)
+                                    Text("Tap to choose")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                    #endif
+                    Spacer()
+                }
+                .listRowBackground(Color.clear)
             }
-            .alert("Submitted!", isPresented: $showSuccess) {
-                Button("Done") { dismiss() }
-            } message: {
-                Text(autoApproved
-                     ? "Your emoji was auto-approved and is now live."
-                     : "Your emoji is pending review by the admin.")
+
+            Section("Shortcode") {
+                HStack {
+                    Text(":").foregroundStyle(.secondary).font(.dmMono(16))
+                    TextField("name", text: $shortcode)
+                        .noAutocapitalization()
+                        .autocorrectionDisabled()
+                        .font(.dmMono(16))
+                        .onChange(of: shortcode) { _, v in shortcode = v.filter { $0 != ":" } }
+                    Text(":").foregroundStyle(.secondary).font(.dmMono(16))
+                }
             }
+
+            Section("Notes") {
+                TextField("Optional", text: $notes, axis: .vertical)
+                    .lineLimit(2...4)
+            }
+
+            if let errorMessage {
+                Section {
+                    Text(errorMessage).font(.footnote).foregroundStyle(.red)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        #if !os(macOS)
+        .onChange(of: imageItem) { _, item in
+            guard let item else { return }
+            Task { await loadImage(item) }
+        }
+        #endif
+        .alert("Submitted!", isPresented: $showSuccess) {
+            Button("Done") { dismiss() }
+        } message: {
+            Text(autoApproved
+                 ? "Your emoji was auto-approved and is now live."
+                 : "Your emoji is pending review by the admin.")
         }
     }
 
+    #if os(macOS)
+    private func loadFile(_ url: URL) async {
+        _ = url.startAccessingSecurityScopedResource()
+        defer { url.stopAccessingSecurityScopedResource() }
+        guard let data = try? Data(contentsOf: url) else { return }
+        let ext = url.pathExtension.lowercased().isEmpty ? "png" : url.pathExtension.lowercased()
+        let mime = UTType(filenameExtension: ext)?.preferredMIMEType ?? "image/png"
+        imagePayload = (data, ext, mime)
+        imagePreview = NSImage(data: data)
+    }
+    #else
     private func loadImage(_ item: PhotosPickerItem) async {
         guard let data = try? await item.loadTransferable(type: Data.self) else { return }
         let ext = item.supportedContentTypes.first?.preferredFilenameExtension ?? "png"
         let mime = item.supportedContentTypes.first?.preferredMIMEType ?? "image/png"
-        #if canImport(UIKit)
-        let preview = UIImage(data: data)
-        #else
-        let preview = NSImage(data: data)
-        #endif
         imagePayload = (data, ext, mime)
-        imagePreview = preview
+        imagePreview = UIImage(data: data)
     }
+    #endif
 
     private func submit() {
         guard let session = auth.session,
@@ -143,14 +208,8 @@ struct EmojiSuggestView: View {
         Task {
             do {
                 autoApproved = try await RESTClient.shared.suggestEmoji(
-                    shortcode: code,
-                    imageData: img.data,
-                    mimeType: img.mime,
-                    ext: img.ext,
-                    notes: notes.isEmpty ? nil : notes,
-                    username: username,
-                    session: session
-                )
+                    shortcode: code, imageData: img.data, mimeType: img.mime, ext: img.ext,
+                    notes: notes.isEmpty ? nil : notes, username: username, session: session)
                 showSuccess = true
                 Haptics.success()
             } catch {

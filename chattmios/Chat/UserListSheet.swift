@@ -9,34 +9,57 @@ struct UserListSheet: View {
     private var offline: [ChatUserSummary] { socket.users.filter { !$0.online }.sorted { $0.username.lowercased() < $1.username.lowercased() } }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if !socket.usersLoaded {
-                    VStack(spacing: 12) {
-                        ProgressView()
-                        Text("Loading members…")
-                            .font(.footnote).foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    List {
-                        Section("Online — \(online.count)") {
-                            ForEach(online) { user in row(user) }
-                        }
-                        if !offline.isEmpty {
-                            Section("Offline — \(offline.count)") {
-                                ForEach(offline) { user in row(user) }
-                            }
-                        }
-                    }
-                }
+        #if os(macOS)
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                Text("Members").font(.headline)
+                Spacer()
+                Button("Done") { dismiss() }
             }
-            .navigationTitle("Members")
-            .inlineNavigationTitle()
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            Divider()
+            listContent
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(minWidth: 380, minHeight: 460)
+        .dismissOnOutsideClick { dismiss() }
+        #else
+        NavigationStack {
+            listContent
+                .navigationTitle("Members")
+                .inlineNavigationTitle()
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
                 }
+        }
+        #endif
+    }
+
+    private var listContent: some View {
+        Group {
+            if !socket.usersLoaded {
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Loading members…")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List {
+                    Section("Online — \(online.count)") {
+                        ForEach(online) { user in row(user) }
+                    }
+                    if !offline.isEmpty {
+                        Section("Offline — \(offline.count)") {
+                            ForEach(offline) { user in row(user) }
+                        }
+                    }
+                }
+                .listStyle(.inset)
             }
         }
     }
@@ -55,7 +78,7 @@ struct UserListSheet: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 5) {
                         ColoredName(name: user.username, color: user.nameColor, fallback: .primary)
-                        UserBadges(isOwner: user.isOwner, verified: user.verified, isGuest: user.isGuest)
+                        UserBadges(isOwner: user.isOwner, verified: user.verified, redVerified: user.redVerified, isGuest: user.isGuest)
                     }
                     Text(subtitle(user))
                         .font(.caption)

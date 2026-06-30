@@ -17,6 +17,7 @@ struct SelfInfoPopover: View {
                             font: .headline, fallback: .primary)
                 UserBadges(isOwner: profile?.isOwner ?? false,
                            verified: profile?.verified ?? false,
+                           redVerified: profile?.redVerified ?? false,
                            isGuest: profile?.isGuest ?? false)
             }
 

@@ -47,24 +47,27 @@ struct SettingsView: View {
                 Section("About") {
                     Link(destination: Server.url("privacy")) {
                         Label("Privacy Policy", systemImage: "hand.raised")
+                            .labelStyle(.titleAndIcon)
                     }
                     Link(destination: URL(string: "https://github.com/emmameowss/chattmios")!) {
                         Label("Source Code", systemImage: "chevron.left.forwardslash.chevron.right")
+                            .labelStyle(.titleAndIcon)
                     }
                     Link(destination: Server.baseURL) {
                         Label("chattm.app", systemImage: "globe")
+                            .labelStyle(.titleAndIcon)
                     }
                     LabeledContent("App version", value: appVersion)
                 }
 
                 Section {
-                    HStack {
-                        Text("Signed in as")
-                        Spacer()
-                        Text(auth.currentUsername ?? "guest").foregroundStyle(.secondary)
-                        if auth.isGuest {
-                            Text("guest").font(.caption2).padding(.horizontal, 5).padding(.vertical, 1)
-                                .background(.gray.opacity(0.3), in: .capsule)
+                    LabeledContent("Signed in as") {
+                        HStack(spacing: 4) {
+                            Text(auth.currentUsername ?? "guest").foregroundStyle(.secondary)
+                            if auth.isGuest {
+                                Text("guest").font(.caption2).padding(.horizontal, 5).padding(.vertical, 1)
+                                    .background(.gray.opacity(0.3), in: .capsule)
+                            }
                         }
                     }
                     Button(role: .destructive) {
@@ -74,6 +77,8 @@ struct SettingsView: View {
                     }
                 }
             }
+            .formStyle(.grouped)
+            .macOSReadableWidth(560)
             .navigationTitle("Settings")
             .task {
                 stats = try? await RESTClient.shared.stats()
@@ -86,6 +91,7 @@ struct SettingsView: View {
                 Text("You'll need to sign in again to chat.")
             }
         }
+        .fillAvailableSpace()
     }
 
     private var appVersion: String {

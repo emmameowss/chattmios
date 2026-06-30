@@ -3,7 +3,7 @@ import Foundation
 /// A parameterized moderation command rendered as a small form.
 enum ModAction: String, Identifiable, CaseIterable {
     case ban, unban, kick, mute, unmute, whois
-    case verify, unverify, setColor, setNick, resetStrikes
+    case verify, unverify, redVerify, unredVerify, setColor, setNick, resetStrikes
     case announce, status, maintenance
     case addFilter, removeFilter
     case addEmoji, removeEmoji
@@ -20,6 +20,8 @@ enum ModAction: String, Identifiable, CaseIterable {
         case .whois: return "Whois"
         case .verify: return "Verify (email)"
         case .unverify: return "Unverify (email)"
+        case .redVerify: return "Red verify (email)"
+        case .unredVerify: return "Remove red verify"
         case .setColor: return "Set user color"
         case .setNick: return "Rename user"
         case .resetStrikes: return "Reset strikes"
@@ -43,6 +45,8 @@ enum ModAction: String, Identifiable, CaseIterable {
         case .whois: return "magnifyingglass"
         case .verify: return "checkmark.seal"
         case .unverify: return "seal"
+        case .redVerify: return "checkmark.seal.fill"
+        case .unredVerify: return "seal"
         case .setColor: return "paintpalette"
         case .setNick: return "pencil"
         case .resetStrikes: return "arrow.counterclockwise"
@@ -68,6 +72,7 @@ enum ModAction: String, Identifiable, CaseIterable {
         case .ban: return "/ban"; case .unban: return "/unban"; case .kick: return "/kick"
         case .mute: return "/mute"; case .unmute: return "/unmute"; case .whois: return "/whois"
         case .verify: return "/verify"; case .unverify: return "/unverify"
+        case .redVerify: return "/redverify"; case .unredVerify: return "/unredverify"
         case .setColor: return "/setcolor"; case .setNick: return "/setnick"
         case .resetStrikes: return "/resetstrikes"
         case .announce: return "/announce"; case .status: return "/status"
@@ -81,7 +86,7 @@ enum ModAction: String, Identifiable, CaseIterable {
     var fields: [Field] {
         switch self {
         case .ban: return [.init(key: "username", placeholder: "Username", required: true), .init(key: "reason", placeholder: "Reason (optional)")]
-        case .unban, .verify, .unverify: return [.init(key: "email", placeholder: "Email", required: true)]
+        case .unban, .verify, .unverify, .redVerify, .unredVerify: return [.init(key: "email", placeholder: "Email", required: true)]
         case .kick: return [.init(key: "username", placeholder: "Username", required: true), .init(key: "reason", placeholder: "Reason (optional)")]
         case .mute: return [.init(key: "username", placeholder: "Username", required: true), .init(key: "time", placeholder: "Duration (e.g. 10m, 2h)", required: true), .init(key: "reason", placeholder: "Reason (optional)")]
         case .unmute, .whois, .resetStrikes: return [.init(key: "username", placeholder: "Username", required: true)]

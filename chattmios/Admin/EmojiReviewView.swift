@@ -46,6 +46,8 @@ struct EmojiReviewView: View {
                 }
             }
         }
+        .listStyle(.inset)
+        .macOSReadableWidth(560)
         .navigationTitle("Emoji Queue")
         .inlineNavigationTitle()
         .refreshable { await load() }

@@ -8,8 +8,26 @@ struct HCAWebAuthView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        #if os(macOS)
+        VStack(spacing: 0) {
+            HStack {
+                Button("Cancel") { dismiss() }
+                Spacer()
+                Text("Sign in").font(.headline)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            Divider()
+            WebAuthContainer(startURL: Server.url("login"), onSession: onSession)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(minWidth: 640, minHeight: 520)
+        .dismissOnOutsideClick { dismiss() }
+        #else
         NavigationStack {
             WebAuthContainer(startURL: Server.url("login"), onSession: onSession)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .navigationTitle("Sign in")
                 .inlineNavigationTitle()
                 .toolbar {
@@ -18,6 +36,7 @@ struct HCAWebAuthView: View {
                     }
                 }
         }
+        #endif
     }
 }
 

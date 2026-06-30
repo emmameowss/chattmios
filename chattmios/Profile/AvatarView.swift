@@ -67,13 +67,22 @@ struct StatusDot: View {
 struct UserBadges: View {
     var isOwner: Bool = false
     var verified: Bool = false
+    var redVerified: Bool = false
     var isGuest: Bool = false
+
+    private static let redGradient = LinearGradient(
+        colors: [Color(hexString: "#3d0a0f") ?? .red, Color(hexString: "#5a151c") ?? .red],
+        startPoint: .topLeading, endPoint: .bottomTrailing)
 
     var body: some View {
         HStack(spacing: 3) {
-            // Owner takes precedence over verified, matching the website.
+            // Priority: owner > red verified > blue verified
             if isOwner {
                 sealBadge(Brand.accent)
+            } else if redVerified {
+                Image(systemName: "checkmark.seal.fill")
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, Self.redGradient)
             } else if verified {
                 sealBadge(Brand.verified)
             }

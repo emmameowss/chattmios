@@ -12,6 +12,7 @@ struct Message: Identifiable, Equatable {
     var color: String?      // raw color string ("#hex" or "flag:name")
     var avatar: String?     // avatar URL
     var verified: Bool
+    var redVerified: Bool
     var mentions: [String]
     var image: String?      // attached image/file URL
     var system: Bool        // server/system announcement
@@ -33,6 +34,7 @@ struct Message: Identifiable, Equatable {
          color: String? = nil,
          avatar: String? = nil,
          verified: Bool = false,
+         redVerified: Bool = false,
          mentions: [String] = [],
          image: String? = nil,
          system: Bool = false) {
@@ -46,6 +48,7 @@ struct Message: Identifiable, Equatable {
         self.color = color
         self.avatar = avatar
         self.verified = verified
+        self.redVerified = redVerified
         self.mentions = mentions
         self.image = image
         self.system = system
@@ -64,6 +67,7 @@ struct Message: Identifiable, Equatable {
         self.color = dict["color"] as? String
         self.avatar = dict["avatar"] as? String
         self.verified = ChatUserSummary.parseBool(dict["verified"]) ?? false
+        self.redVerified = ChatUserSummary.parseBool(dict["redVerified"]) ?? false
         self.mentions = (dict["mentions"] as? [String]) ?? []
         self.image = dict["image"] as? String
         self.system = (dict["system"] as? Bool) ?? (dict["isSystem"] as? Bool) ?? false

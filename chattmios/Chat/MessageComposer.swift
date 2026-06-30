@@ -1,11 +1,16 @@
 import SwiftUI
 import PhotosUI
+import UniformTypeIdentifiers
 
 struct MessageComposer: View {
     @Bindable var model: ChatViewModel
     @Environment(SocketService.self) private var socket
 
+    #if os(macOS)
+    @State private var showImagePicker = false
+    #else
     @State private var photoItem: PhotosPickerItem?
+    #endif
     @State private var showEmojiPicker = false
     @State private var showEmojiSuggest = false
     @FocusState private var focused: Bool
@@ -35,6 +40,19 @@ struct MessageComposer: View {
             }
 
             HStack(spacing: 10) {
+                #if os(macOS)
+                Button { showImagePicker = true } label: {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .font(.title3)
+                        .frame(width: 32, height: 36)
+                        .foregroundStyle(Color.secondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isUploading)
+                .fileImporter(isPresented: $showImagePicker, allowedContentTypes: [.image]) { result in
+                    if case .success(let url) = result { Task { await attachFile(url) } }
+                }
+                #else
                 PhotosPicker(selection: $photoItem, matching: .images) {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.title3)
@@ -42,6 +60,7 @@ struct MessageComposer: View {
                         .foregroundStyle(Color.secondary)
                 }
                 .disabled(model.isUploading)
+                #endif
 
                 Button { toggleEmojiPicker() } label: {
                     Image(systemName: "face.smiling")
@@ -49,6 +68,9 @@ struct MessageComposer: View {
                         .frame(width: 32, height: 36)
                         .foregroundStyle(showEmojiPicker ? Brand.accent : Color.secondary)
                 }
+                #if os(macOS)
+                .buttonStyle(.plain)
+                #endif
 
                 TextField("Message chat™", text: $model.composerText, axis: .vertical)
                     .lineLimit(1...5)
@@ -60,7 +82,8 @@ struct MessageComposer: View {
                     .onSubmit { model.send() }
 
                 if model.isUploading {
-                    ProgressView().frame(width: 36, height: 36)
+                    ProgressView()
+                        .frame(width: 36, height: 36)
                 } else {
                     Button { model.send(); focused = true } label: {
                         Image(systemName: "arrow.up.circle.fill")
@@ -68,6 +91,9 @@ struct MessageComposer: View {
                             .foregroundStyle(canSend ? AnyShapeStyle(Brand.gradient) : AnyShapeStyle(Color.secondary))
                     }
                     .disabled(!canSend)
+                    #if os(macOS)
+                    .buttonStyle(.plain)
+                    #endif
                 }
             }
             .padding(.horizontal, 8)
@@ -87,7 +113,11 @@ struct MessageComposer: View {
             }
         }
         .padding(.horizontal, 10)
+        #if os(macOS)
+        .padding(.bottom, 16)
+        #else
         .padding(.bottom, 4)
+        #endif
         .simultaneousGesture(
             DragGesture(minimumDistance: 20)
                 .onChanged { value in
@@ -101,19 +131,20 @@ struct MessageComposer: View {
         .onChange(of: model.focusRequest) { _, requested in
             if requested { focused = true; model.focusRequest = false }
         }
+        #if !os(macOS)
         .onChange(of: photoItem) { _, newValue in
             guard let newValue else { return }
             Task { await attachPhoto(newValue); photoItem = nil }
         }
+        #endif
         .sheet(isPresented: $showEmojiSuggest) { EmojiSuggestView() }
     }
 
     private func toggleEmojiPicker() {
-        if !showEmojiPicker { focused = false }   // swap the keyboard for the panel
+        if !showEmojiPicker { focused = false }
         withAnimation(.easeOut(duration: 0.2)) { showEmojiPicker.toggle() }
     }
 
-    /// Append `:code:` to the message, keeping a sensible space before it.
     private func insertEmoji(_ code: String) {
         var text = model.composerText
         if !text.isEmpty && !text.hasSuffix(" ") { text += " " }
@@ -186,10 +217,21 @@ struct MessageComposer: View {
         }
     }
 
+    #if os(macOS)
+    private func attachFile(_ url: URL) async {
+        _ = url.startAccessingSecurityScopedResource()
+        defer { url.stopAccessingSecurityScopedResource() }
+        guard let data = try? Data(contentsOf: url) else { return }
+        let ext = url.pathExtension.lowercased().isEmpty ? "jpg" : url.pathExtension.lowercased()
+        let mime = UTType(filenameExtension: ext)?.preferredMIMEType ?? "image/jpeg"
+        model.attachImage(data: data, filename: "upload.\(ext)", mime: mime)
+    }
+    #else
     private func attachPhoto(_ item: PhotosPickerItem) async {
         guard let data = try? await item.loadTransferable(type: Data.self) else { return }
         let ext = item.supportedContentTypes.first?.preferredFilenameExtension ?? "jpg"
         let mime = item.supportedContentTypes.first?.preferredMIMEType ?? "image/jpeg"
         model.attachImage(data: data, filename: "upload.\(ext)", mime: mime)
     }
+    #endif
 }

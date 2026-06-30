@@ -65,6 +65,7 @@ struct LoginView: View {
                     }
                 }
                 .padding(.horizontal, 28)
+                .macOSReadableWidth()
 
                 if let error = auth.errorMessage {
                     Text(error)
