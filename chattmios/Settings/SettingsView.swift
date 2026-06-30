@@ -46,16 +46,32 @@ struct SettingsView: View {
 
                 Section("About") {
                     Link(destination: Server.url("privacy")) {
-                        Label("Privacy Policy", systemImage: "hand.raised")
-                            .labelStyle(.titleAndIcon)
+                        Label {
+                            Text("Privacy Policy")
+                        } icon: {
+                            Image(systemName: "hand.raised")
+                                .frame(width: 20, alignment: .center)
+                        }
+                        .labelStyle(.titleAndIcon)
                     }
                     Link(destination: URL(string: "https://github.com/emmameowss/chattmios")!) {
-                        Label("Source Code", systemImage: "chevron.left.forwardslash.chevron.right")
-                            .labelStyle(.titleAndIcon)
+                        Label {
+                            Text("Source Code")
+                        } icon: {
+                            Image(systemName: "chevron.left.forwardslash.chevron.right")
+                                .scaledToFit()
+                                .frame(width: 20, alignment: .center)
+                        }
+                        .labelStyle(.titleAndIcon)
                     }
                     Link(destination: Server.baseURL) {
-                        Label("chattm.app", systemImage: "globe")
-                            .labelStyle(.titleAndIcon)
+                        Label {
+                            Text("chattm.app")
+                        } icon: {
+                            Image(systemName: "globe")
+                                .frame(width: 20, alignment: .center)
+                        }
+                        .labelStyle(.titleAndIcon)
                     }
                     LabeledContent("App version", value: appVersion)
                 }
