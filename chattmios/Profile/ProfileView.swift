@@ -131,7 +131,7 @@ struct ProfileDetails: View {
                             .font(.caption)
                         Text(
                             profile.isOwner ? "owner of chat™, made this thing probably" :
-                            profile.redVerified ? "i got threatened to add this send help im trapped" :
+                            profile.redVerified ? "this checkmark is only held by my girlfriend and z. you cannot get it." :
                                 "verified by emma because they're cool"
                         )
                         .font(.caption)
