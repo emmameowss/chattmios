@@ -35,9 +35,16 @@ enum Brand {
 extension Color {
     /// A color that resolves differently in light vs dark mode.
     static func dynamic(light: Color, dark: Color) -> Color {
+        #if canImport(UIKit)
         Color(UIColor { trait in
             trait.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light)
         })
+        #else
+        Color(NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(dark) : NSColor(light)
+        })
+        #endif
     }
 }
 
@@ -54,6 +61,42 @@ struct GlassCard<Content: View>: View {
 }
 
 extension View {
+    /// `.navigationBarTitleDisplayMode(.inline)` on iOS; no-op on macOS.
+    func inlineNavigationTitle() -> some View {
+        #if os(iOS)
+        self.navigationBarTitleDisplayMode(.inline)
+        #else
+        self
+        #endif
+    }
+
+    /// `.noAutocapitalization()` on iOS; no-op on macOS.
+    func noAutocapitalization() -> some View {
+        #if os(iOS)
+        self.textInputAutocapitalization(.never)
+        #else
+        self
+        #endif
+    }
+
+    /// Forces the view to fill all available space — needed on macOS where views size to content by default.
+    func fillAvailableSpace() -> some View {
+        #if os(macOS)
+        self.frame(maxWidth: .infinity, maxHeight: .infinity)
+        #else
+        self
+        #endif
+    }
+
+    /// Caps content to a readable max width on macOS and centers it in the available space.
+    func macOSReadableWidth(_ max: CGFloat = 480) -> some View {
+        #if os(macOS)
+        self.frame(maxWidth: max).frame(maxWidth: .infinity)
+        #else
+        self
+        #endif
+    }
+
     /// Apply a glass background clipped to a rounded rect.
     func glassPanel(cornerRadius: CGFloat = 22, interactive: Bool = false) -> some View {
         let effect: Glass = interactive ? .regular.interactive() : .regular
@@ -64,6 +107,34 @@ extension View {
     func glassCapsule(interactive: Bool = true) -> some View {
         let effect: Glass = interactive ? .regular.interactive() : .regular
         return self.glassEffect(effect, in: .capsule)
+    }
+}
+
+extension Image {
+    /// Cross-platform init from a platform image type.
+    #if canImport(UIKit)
+    init(platformImage: UIImage) { self.init(uiImage: platformImage) }
+    #else
+    init(platformImage: NSImage) { self.init(nsImage: platformImage) }
+    #endif
+}
+
+extension ToolbarItemPlacement {
+    /// Leading bar on iOS; `.automatic` on macOS.
+    static var leadingBar: Self {
+        #if os(iOS)
+        .topBarLeading
+        #else
+        .automatic
+        #endif
+    }
+    /// Trailing bar on iOS; `.primaryAction` on macOS.
+    static var trailingBar: Self {
+        #if os(iOS)
+        .topBarTrailing
+        #else
+        .primaryAction
+        #endif
     }
 }
 

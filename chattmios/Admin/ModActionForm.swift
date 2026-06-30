@@ -8,29 +8,55 @@ struct ModActionForm: View {
     @State private var values: [String: String] = [:]
 
     var body: some View {
+        #if os(macOS)
+        VStack(spacing: 0) {
+            HStack {
+                Button("Cancel") { dismiss() }
+                Spacer()
+                Text(action.title).font(.headline)
+                Spacer()
+                Button("Run") { onSubmit(preview) }
+                    .disabled(!isValid)
+                    .frame(width: 60, alignment: .trailing)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            Divider()
+            formContent
+        }
+        .frame(minWidth: 360, minHeight: 200)
+        .dismissOnOutsideClick { dismiss() }
+        #else
         NavigationStack {
-            Form {
-                Section {
-                    ForEach(action.fields) { field in
-                        TextField(field.placeholder, text: binding(for: field.key), axis: .vertical)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
+            formContent
+                .navigationTitle(action.title)
+                .inlineNavigationTitle()
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Run") { onSubmit(preview) }.disabled(!isValid)
                     }
                 }
-                Section {
-                    Text(preview).font(.system(.footnote, design: .monospaced)).foregroundStyle(.secondary)
+        }
+        #endif
+    }
+
+    private var formContent: some View {
+        Form {
+            Section {
+                ForEach(action.fields) { field in
+                    TextField(field.placeholder, text: binding(for: field.key), axis: .vertical)
+                        .noAutocapitalization()
+                        .autocorrectionDisabled()
                 }
             }
-            .navigationTitle(action.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Run") { onSubmit(preview) }
-                        .disabled(!isValid)
-                }
+            Section {
+                Text(preview)
+                    .font(.system(.footnote, design: .monospaced))
+                    .foregroundStyle(.secondary)
             }
         }
+        .formStyle(.grouped)
     }
 
     private func binding(for key: String) -> Binding<String> {

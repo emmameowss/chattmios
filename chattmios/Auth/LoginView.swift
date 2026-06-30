@@ -35,7 +35,7 @@ struct LoginView: View {
 
                         if showGuestField && !guestsDisabled {
                             TextField("Guest name (optional)", text: $guestUsername)
-                                .textInputAutocapitalization(.never)
+                                .noAutocapitalization()
                                 .autocorrectionDisabled()
                                 .padding()
                                 .glassPanel(cornerRadius: 16)
@@ -65,6 +65,7 @@ struct LoginView: View {
                     }
                 }
                 .padding(.horizontal, 28)
+                .macOSReadableWidth()
 
                 if let error = auth.errorMessage {
                     Text(error)

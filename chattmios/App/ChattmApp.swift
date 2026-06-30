@@ -19,6 +19,12 @@ struct ChattmApp: App {
                 .environment(socket)
                 .preferredColorScheme(settings.appearance.colorScheme)
                 .tint(Brand.accent)
+                #if os(macOS)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                #endif
         }
+        #if os(macOS)
+        .defaultSize(width: 720, height: 620)
+        #endif
     }
 }

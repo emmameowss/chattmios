@@ -52,10 +52,15 @@ struct MessageRow: View {
                 if showsHeader {
                     HStack(spacing: 6) {
                         Button { onProfile(message.username) } label: {
-                            ColoredName(name: message.username, color: message.nameColor)
+                            ColoredName(
+                                name: message.username,
+                                color: message.nameColor,
+                                fallback: (message.redVerified && !message.isToken && message.nameColor == .none)
+                                    ? (Color(hexString: "#5a151c") ?? .red) : .primary
+                            )
                         }
                         .buttonStyle(.plain)
-                        UserBadges(isOwner: authorIsOwner, verified: message.verified, isGuest: message.isGuest)
+                        UserBadges(isOwner: authorIsOwner, verified: message.verified, redVerified: message.redVerified, isGuest: message.isGuest)
                         Text(message.time, format: .dateTime.hour().minute())
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
@@ -110,7 +115,14 @@ struct MessageRow: View {
         )
         .contextMenu {
             if let text = message.text, !text.isEmpty {
-                Button { UIPasteboard.general.string = text } label: {
+                Button {
+                    #if canImport(UIKit)
+                    UIPasteboard.general.string = text
+                    #else
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                    #endif
+                } label: {
                     Label("Copy", systemImage: "doc.on.doc")
                 }
             }

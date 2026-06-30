@@ -18,8 +18,10 @@ struct MainTabView: View {
             if socket.isOwner {
                 Tab("Admin", systemImage: "shield.lefthalf.filled") {
                     NavigationStack { AdminView() }
+                        .fillAvailableSpace()
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

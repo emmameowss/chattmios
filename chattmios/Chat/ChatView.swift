@@ -33,39 +33,27 @@ private struct ChatScreen: View {
     @State private var showSelfInfo = false
     @State private var imageURL: IdentifiableURL?
     @State private var profileTarget: ProfileTarget?
-    @State private var atBottom = true
 
     private var myProfile: UserProfile? { socket.profiles[model.username] }
 
     var body: some View {
         NavigationStack {
-            messageList
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    VStack(spacing: 6) {
-                        if !socket.typingUsers.isEmpty {
-                            TypingIndicatorView(names: Array(socket.typingUsers).sorted())
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        let toast = socket.commandError
-                        let mute = socket.muteNotice
-                        let status = socket.serverStatus
-                        if let msg = toast ?? mute ?? status {
-                            Text(msg)
-                                .font(.dmMono(13))
-                                .foregroundStyle(Brand.accent)
-                                .multilineTextAlignment(.center)
-                                .transition(.opacity)
-                        }
-                        MessageComposer(model: model)
-                    }
-                    .animation(.easeInOut(duration: 0.2), value: socket.commandError)
-                    .animation(.easeInOut(duration: 0.2), value: socket.muteNotice)
-                    .animation(.easeInOut(duration: 0.2), value: socket.serverStatus)
+            Group {
+                #if os(macOS)
+                HStack(spacing: 0) {
+                    chatArea
+                    Divider()
+                    MemberSidebar { name in profileTarget = ProfileTarget(id: name) }
+                        .frame(width: 220)
                 }
+                #else
+                chatArea
+                #endif
+            }
             .navigationTitle("chat™")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .leadingBar) {
                     Button { showSelfInfo = true } label: {
                         AvatarView(username: model.username, avatarURL: myProfile?.avatar, size: 30)
                     }
@@ -73,14 +61,16 @@ private struct ChatScreen: View {
                         SelfInfoPopover(username: model.username, profile: myProfile)
                     }
                 }
-                ToolbarItem(placement: .topBarLeading) { connectionBadge }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .leadingBar) { connectionBadge }
+                #if !os(macOS)
+                ToolbarItem(placement: .trailingBar) {
                     Button { showUserList = true } label: {
                         Label("\(socket.users.filter(\.online).count)", systemImage: "person.2.fill")
                             .labelStyle(.titleAndIcon)
                             .font(.subheadline)
                     }
                 }
+                #endif
             }
             .sheet(isPresented: $showUserList) {
                 UserListSheet { name in profileTarget = ProfileTarget(id: name) }
@@ -96,6 +86,33 @@ private struct ChatScreen: View {
                 if state == .connected { socket.getProfile(model.username) }
             }
         }
+        .fillAvailableSpace()
+    }
+
+    private var chatArea: some View {
+        messageList
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                VStack(spacing: 6) {
+                    if !socket.typingUsers.isEmpty {
+                        TypingIndicatorView(names: Array(socket.typingUsers).sorted())
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    let toast = socket.commandError
+                    let mute = socket.muteNotice
+                    let status = socket.serverStatus
+                    if let msg = toast ?? mute ?? status {
+                        Text(msg)
+                            .font(.dmMono(13))
+                            .foregroundStyle(Brand.accent)
+                            .multilineTextAlignment(.center)
+                            .transition(.opacity)
+                    }
+                    MessageComposer(model: model)
+                }
+                .animation(.easeInOut(duration: 0.2), value: socket.commandError)
+                .animation(.easeInOut(duration: 0.2), value: socket.muteNotice)
+                .animation(.easeInOut(duration: 0.2), value: socket.serverStatus)
+            }
     }
 
     private var messageList: some View {
@@ -173,6 +190,55 @@ private struct ChatScreen: View {
         return current.time.timeIntervalSince(previous.time) > 5 * 60
     }
 }
+
+#if os(macOS)
+private struct MemberSidebar: View {
+    @Environment(SocketService.self) private var socket
+    var onProfile: (String) -> Void
+
+    private var online: [ChatUserSummary] {
+        socket.users.filter(\.online).sorted { $0.username.lowercased() < $1.username.lowercased() }
+    }
+    private var offline: [ChatUserSummary] {
+        socket.users.filter { !$0.online }.sorted { $0.username.lowercased() < $1.username.lowercased() }
+    }
+
+    var body: some View {
+        List {
+                Section("Online — \(online.count)") {
+                    ForEach(online) { user in row(user) }
+                }
+                if !offline.isEmpty {
+                    Section("Offline — \(offline.count)") {
+                        ForEach(offline) { user in row(user) }
+                    }
+                }
+            }
+            .listStyle(.inset)
+    }
+
+    private func row(_ user: ChatUserSummary) -> some View {
+        Button { onProfile(user.username) } label: {
+            HStack(spacing: 8) {
+                ZStack(alignment: .bottomTrailing) {
+                    AvatarView(username: user.username, avatarURL: user.avatar, size: 28)
+                    StatusDot(status: user.effectiveStatus)
+                        .offset(x: 2, y: 2)
+                }
+                HStack(spacing: 4) {
+                    ColoredName(name: user.username, color: user.nameColor, fallback: .primary)
+                        .font(.caption.weight(.medium))
+                        .lineLimit(1)
+                    UserBadges(isOwner: user.isOwner, verified: user.verified, redVerified: user.redVerified, isGuest: user.isGuest)
+                }
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+#endif
 
 struct IdentifiableURL: Identifiable {
     let url: URL

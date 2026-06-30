@@ -8,19 +8,39 @@ struct HCAWebAuthView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        #if os(macOS)
+        VStack(spacing: 0) {
+            HStack {
+                Button("Cancel") { dismiss() }
+                Spacer()
+                Text("Sign in").font(.headline)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            Divider()
+            WebAuthContainer(startURL: Server.url("login"), onSession: onSession)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(minWidth: 640, minHeight: 520)
+        .dismissOnOutsideClick { dismiss() }
+        #else
         NavigationStack {
             WebAuthContainer(startURL: Server.url("login"), onSession: onSession)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .navigationTitle("Sign in")
-                .navigationBarTitleDisplayMode(.inline)
+                .inlineNavigationTitle()
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") { dismiss() }
                     }
                 }
         }
+        #endif
     }
 }
 
+#if os(iOS)
 private struct WebAuthContainer: UIViewRepresentable {
     let startURL: URL
     let onSession: (String) -> Void
@@ -29,7 +49,7 @@ private struct WebAuthContainer: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
-        config.websiteDataStore = .nonPersistent() // fresh login each time
+        config.websiteDataStore = .nonPersistent()
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.load(URLRequest(url: startURL))
@@ -37,7 +57,28 @@ private struct WebAuthContainer: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
+}
+#else
+private struct WebAuthContainer: NSViewRepresentable {
+    let startURL: URL
+    let onSession: (String) -> Void
 
+    func makeCoordinator() -> Coordinator { Coordinator(onSession: onSession) }
+
+    func makeNSView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = .nonPersistent()
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
+        webView.load(URLRequest(url: startURL))
+        return webView
+    }
+
+    func updateNSView(_ nsView: WKWebView, context: Context) {}
+}
+#endif
+
+extension WebAuthContainer {
     final class Coordinator: NSObject, WKNavigationDelegate {
         let onSession: (String) -> Void
         private var fired = false
@@ -61,7 +102,6 @@ private struct WebAuthContainer: UIViewRepresentable {
             }
         }
 
-        /// Pull `session` out of a URL fragment like `#session=abc`.
         static func session(from url: URL) -> String? {
             guard let fragment = URLComponents(url: url, resolvingAgainstBaseURL: false)?.fragment else { return nil }
             for pair in fragment.components(separatedBy: "&") {

@@ -9,25 +9,47 @@ struct ProfileView: View {
     private var profile: UserProfile? { socket.profiles[username] }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                if let profile {
-                    ProfileHeader(profile: profile)
-                    ProfileDetails(profile: profile)
-                } else {
-                    ProgressView("Loading profile…")
-                        .frame(maxWidth: .infinity, minHeight: 300)
-                }
+        #if os(macOS)
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                Text(username).font(.headline)
+                Spacer()
+                Button("Done") { dismiss() }
             }
-            .navigationTitle(username)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
-            .task { socket.getProfile(username) }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            Divider()
+            scrollContent
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(minWidth: 360, minHeight: 420)
+        .dismissOnOutsideClick { dismiss() }
+        #else
+        NavigationStack {
+            scrollContent
+                .navigationTitle(username)
+                .inlineNavigationTitle()
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
+                }
+        }
+        #endif
+    }
+
+    private var scrollContent: some View {
+        ScrollView {
+            if let profile {
+                ProfileHeader(profile: profile)
+                ProfileDetails(profile: profile)
+            } else {
+                ProgressView("Loading profile…")
+                    .frame(maxWidth: .infinity, minHeight: 300)
+            }
+        }
+        .task { socket.getProfile(username) }
     }
 }
 
@@ -44,7 +66,7 @@ struct ProfileHeader: View {
             HStack(spacing: 8) {
                 ColoredName(name: profile.username, color: profile.nameColor,
                             font: .title2.weight(.bold), fallback: .primary)
-                UserBadges(isOwner: profile.isOwner, verified: profile.verified, isGuest: profile.isGuest)
+                UserBadges(isOwner: profile.isOwner, verified: profile.verified, redVerified: profile.redVerified, isGuest: profile.isGuest)
             }
             if !profile.pronouns.isEmpty {
                 Text(profile.pronouns).font(.subheadline).foregroundStyle(.secondary)
@@ -96,8 +118,31 @@ struct ProfileDetails: View {
                     }
                 }
             }
+
+            if profile.isOwner || profile.redVerified || profile.verified {
+                GlassCard {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundStyle(
+                                profile.isOwner ? Brand.accent :
+                                profile.redVerified ? Color(hexString: "#5a151c") ?? .red :
+                                    .blue
+                            )
+                            .font(.caption)
+                        Text(
+                            profile.isOwner ? "owner of chat™, made this thing probably" :
+                            profile.redVerified ? "i got threatened to add this send help im trapped" :
+                                "verified by emma because they're cool"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
         }
         .padding(.horizontal)
+        .padding(.bottom, 16)
     }
 
     private func detailRow(_ title: String, value: String) -> some View {

@@ -8,6 +8,7 @@ struct UserProfile: Equatable {
     var bio: String
     var status: PresenceStatus
     var verified: Bool
+    var redVerified: Bool
     var isOwner: Bool
     var isGuest: Bool
     var online: Bool
@@ -29,6 +30,7 @@ struct UserProfile: Equatable {
             self.status = .offline
         }
         self.verified = ChatUserSummary.parseBool(dict["verified"]) ?? false
+        self.redVerified = ChatUserSummary.parseBool(dict["redVerified"]) ?? false
         self.isOwner = ChatUserSummary.parseBool(dict["isOwner"]) ?? false
         self.isGuest = ChatUserSummary.parseBool(dict["isGuest"]) ?? false
         self.online = ChatUserSummary.parseBool(dict["online"]) ?? false

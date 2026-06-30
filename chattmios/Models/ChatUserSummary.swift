@@ -21,6 +21,7 @@ struct ChatUserSummary: Identifiable, Equatable {
     var isOwner: Bool
     var isGuest: Bool
     var verified: Bool
+    var redVerified: Bool
     var color: String?
     var avatar: String?
     var lastSeen: Date?
@@ -43,6 +44,7 @@ struct ChatUserSummary: Identifiable, Equatable {
         self.isOwner = Self.parseBool(dict["isOwner"]) ?? Self.parseBool(dict["owner"]) ?? false
         self.isGuest = Self.parseBool(dict["isGuest"]) ?? Self.parseBool(dict["guest"]) ?? false
         self.verified = Self.parseBool(dict["verified"]) ?? false
+        self.redVerified = Self.parseBool(dict["redVerified"]) ?? false
         self.color = dict["color"] as? String
         self.avatar = dict["avatar"] as? String
         if let ls = dict["lastSeen"] {

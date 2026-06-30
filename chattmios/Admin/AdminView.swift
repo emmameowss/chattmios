@@ -17,6 +17,7 @@ struct AdminView: View {
                 actionRow(.ban); actionRow(.unban); actionRow(.kick)
                 actionRow(.mute); actionRow(.unmute); actionRow(.whois)
                 actionRow(.verify); actionRow(.unverify)
+                actionRow(.redVerify); actionRow(.unredVerify)
                 actionRow(.setColor); actionRow(.setNick); actionRow(.resetStrikes)
             }
             Section("Chat") {
@@ -41,11 +42,15 @@ struct AdminView: View {
                     EmojiReviewView()
                 } label: {
                     Label("Review submissions", systemImage: "tray.full")
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .tint(nil)
             }
         }
+        .listStyle(.inset)
+        .macOSReadableWidth(560)
         .navigationTitle("Moderation")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .sheet(item: $actionSheet) { action in
             ModActionForm(action: action) { command in
                 run(command)
@@ -68,16 +73,23 @@ struct AdminView: View {
     private func actionRow(_ action: ModAction) -> some View {
         Button { actionSheet = action } label: {
             Label(action.title, systemImage: action.icon)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .tint(action.destructive ? .red : nil)
     }
 
     private func quickRow(_ title: String, icon: String, perform: @escaping () -> Void) -> some View {
-        Button { perform() } label: { Label(title, systemImage: icon) }
+        Button { perform() } label: {
+            Label(title, systemImage: icon)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     private func destructiveRow(_ title: String, icon: String, perform: @escaping () -> Void) -> some View {
-        Button(role: .destructive) { perform() } label: { Label(title, systemImage: icon) }
+        Button(role: .destructive) { perform() } label: {
+            Label(title, systemImage: icon)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     private func run(_ command: String) {

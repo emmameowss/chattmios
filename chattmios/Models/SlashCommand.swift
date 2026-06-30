@@ -39,6 +39,8 @@ struct SlashCommand: Identifiable, Equatable {
         .init(name: "/setnick", args: "[oldname] [newname]", summary: "Rename a user", ownerOnly: true),
         .init(name: "/verify", args: "[email]", summary: "Verify an account", ownerOnly: true),
         .init(name: "/unverify", args: "[email]", summary: "Revoke verification", ownerOnly: true),
+        .init(name: "/redverify", args: "[email]", summary: "Grant red verification", ownerOnly: true),
+        .init(name: "/unredverify", args: "[email]", summary: "Revoke red verification", ownerOnly: true),
         .init(name: "/addfilter", args: "[word]", summary: "Add a filtered word", ownerOnly: true),
         .init(name: "/removefilter", args: "[word]", summary: "Remove a filtered word", ownerOnly: true),
         .init(name: "/reloadfilter", args: "", summary: "Reload the word filter", ownerOnly: true),

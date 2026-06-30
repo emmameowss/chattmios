@@ -45,9 +45,13 @@ struct NameColorPicker: View {
 extension Color {
     /// Best-effort "#rrggbb" representation.
     var hexString: String {
-        let ui = UIColor(self)
+        #if canImport(UIKit)
+        let native = UIColor(self)
+        #else
+        let native = NSColor(self).usingColorSpace(.sRGB) ?? NSColor(self)
+        #endif
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        ui.getRed(&r, green: &g, blue: &b, alpha: &a)
+        native.getRed(&r, green: &g, blue: &b, alpha: &a)
         return String(format: "#%02x%02x%02x", Int(r * 255), Int(g * 255), Int(b * 255))
     }
 }

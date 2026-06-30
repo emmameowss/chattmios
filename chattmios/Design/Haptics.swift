@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import UIKit
 
 enum Haptics {
@@ -11,3 +12,10 @@ enum Haptics {
         UINotificationFeedbackGenerator().notificationOccurred(.warning)
     }
 }
+#else
+enum Haptics {
+    static func tap() {}
+    static func success() {}
+    static func warning() {}
+}
+#endif
