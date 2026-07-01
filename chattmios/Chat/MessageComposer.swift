@@ -39,6 +39,10 @@ struct MessageComposer: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
+            if let replying = model.replyingTo {
+                replyBanner(replying)
+            }
+
             HStack(spacing: 10) {
                 #if os(macOS)
                 Button { showImagePicker = true } label: {
@@ -155,6 +159,30 @@ struct MessageComposer: View {
     private var canSend: Bool {
         !model.composerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || model.pendingImage != nil
+    }
+
+    private func replyBanner(_ replying: Message) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "arrowshape.turn.up.left")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("Replying to")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(replying.username)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Brand.accent)
+                .lineLimit(1)
+            Spacer()
+            Button { model.cancelReply() } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .glassPanel(cornerRadius: 14)
     }
 
     @ViewBuilder

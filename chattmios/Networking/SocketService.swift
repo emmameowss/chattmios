@@ -271,10 +271,11 @@ final class SocketService {
 
     // MARK: Emit
 
-    func sendMessage(text: String?, image: String? = nil, username: String) {
+    func sendMessage(text: String?, image: String? = nil, username: String, replyTo: String? = nil) {
         var payload: [String: Any] = ["username": username]
         payload["text"] = text ?? NSNull()
         payload["image"] = image ?? NSNull()
+        payload["replyTo"] = replyTo ?? NSNull()
         socket?.emit("message", payload)
     }
 

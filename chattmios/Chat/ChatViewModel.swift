@@ -13,6 +13,7 @@ final class ChatViewModel {
     var isUploading = false
     var uploadError: String?
     var focusRequest = false
+    var replyingTo: Message?
 
     private var typingTask: Task<Void, Never>?
     private var isTyping = false
@@ -47,23 +48,25 @@ final class ChatViewModel {
 
         let caption = trimmed.isEmpty ? nil : trimmed
         let attachment = pendingImage
+        let replyID = replyingTo?.id
         composerText = ""
         pendingImage = nil
+        replyingTo = nil
         stopTyping()
 
         if let attachment {
-            Task { await upload(attachment, caption: caption) }
+            Task { await upload(attachment, caption: caption, replyTo: replyID) }
         } else if let caption {
             if caption.hasPrefix("/") {
                 socket.sendCommand(caption, username: username)
             } else {
-                socket.sendMessage(text: caption, username: username)
+                socket.sendMessage(text: caption, username: username, replyTo: replyID)
             }
             Haptics.tap()
         }
     }
 
-    private func upload(_ image: PendingImage, caption: String?) async {
+    private func upload(_ image: PendingImage, caption: String?, replyTo: String?) async {
         guard let session = auth.session else { return }
         isUploading = true
         uploadError = nil
@@ -72,7 +75,7 @@ final class ChatViewModel {
             let url = try await RESTClient.shared.upload(
                 data: image.data, filename: image.filename, mimeType: image.mime,
                 username: username, session: session, avatar: false)
-            socket.sendMessage(text: caption, image: url, username: username)
+            socket.sendMessage(text: caption, image: url, username: username, replyTo: replyTo)
             Haptics.success()
         } catch {
             uploadError = error.localizedDescription
@@ -82,6 +85,17 @@ final class ChatViewModel {
 
     func delete(_ message: Message) {
         socket.deleteMessage(id: message.id)
+        if replyingTo?.id == message.id { replyingTo = nil }
+    }
+
+    func startReply(_ message: Message) {
+        guard !message.system else { return }
+        replyingTo = message
+        focusRequest = true
+    }
+
+    func cancelReply() {
+        replyingTo = nil
     }
 
     // MARK: Typing

@@ -33,6 +33,7 @@ private struct ChatScreen: View {
     @State private var showSelfInfo = false
     @State private var imageURL: IdentifiableURL?
     @State private var profileTarget: ProfileTarget?
+    @State private var flashMessageID: String?
 
     private var myProfile: UserProfile? { socket.profiles[model.username] }
 
@@ -127,6 +128,7 @@ private struct ChatScreen: View {
                             authorIsOwner: isOwner(username: message.username),
                             currentUsername: model.username,
                             canModerate: socket.isOwner,
+                            isFlashing: flashMessageID == message.id,
                             onProfile: { profileTarget = ProfileTarget(id: $0) },
                             onDelete: { model.delete($0) },
                             onImage: { imageURL = IdentifiableURL(url: $0) },
@@ -134,7 +136,9 @@ private struct ChatScreen: View {
                                 let prefix = model.composerText.isEmpty ? "" : model.composerText.hasSuffix(" ") ? "" : " "
                                 model.composerText += "\(prefix)@\(username) "
                                 model.focusRequest = true
-                            }
+                            },
+                            onReply: { model.startReply($0) },
+                            onJumpToMessage: { jumpToMessage($0, proxy: proxy) }
                         )
                         .id(message.id)
                     }
@@ -186,8 +190,18 @@ private struct ChatScreen: View {
         let current = messages[index]
         let previous = messages[index - 1]
         if current.system || previous.system { return true }
+        if current.replyTo != nil { return true }
         if current.username != previous.username { return true }
         return current.time.timeIntervalSince(previous.time) > 5 * 60
+    }
+
+    private func jumpToMessage(_ id: String, proxy: ScrollViewProxy) {
+        guard socket.messages.contains(where: { $0.id == id }) else { return }
+        withAnimation { proxy.scrollTo(id, anchor: .center) }
+        flashMessageID = id
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            if flashMessageID == id { flashMessageID = nil }
+        }
     }
 }
 

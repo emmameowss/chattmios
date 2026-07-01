@@ -7,11 +7,14 @@ struct MessageRow: View {
     let authorIsOwner: Bool    // derived from the userlist (messages don't carry it)
     let currentUsername: String?
     let canModerate: Bool
+    let isFlashing: Bool
 
     var onProfile: (String) -> Void
     var onDelete: (Message) -> Void
     var onImage: (URL) -> Void
     var onMention: (String) -> Void
+    var onReply: (Message) -> Void
+    var onJumpToMessage: (String) -> Void
 
     @GestureState private var swipeOffset: CGFloat = 0
 
@@ -49,6 +52,10 @@ struct MessageRow: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
+                if let reply = message.replyTo {
+                    replyReference(reply)
+                }
+
                 if showsHeader {
                     HStack(spacing: 6) {
                         Button { onProfile(message.username) } label: {
@@ -82,9 +89,10 @@ struct MessageRow: View {
         .padding(.bottom, 3)
         .padding(.horizontal, 12)
         .background(
-            mentionsMe ? Brand.accent.opacity(0.10) : Color.clear,
+            isFlashing ? Brand.accent.opacity(0.18) : (mentionsMe ? Brand.accent.opacity(0.10) : Color.clear),
             in: .rect(cornerRadius: 10)
         )
+        .animation(.easeOut(duration: 1), value: isFlashing)
         .offset(x: swipeOffset)
         .overlay(alignment: .leading) {
             Image(systemName: "at")
@@ -126,6 +134,9 @@ struct MessageRow: View {
                     Label("Copy", systemImage: "doc.on.doc")
                 }
             }
+            Button { onReply(message) } label: {
+                Label("Reply", systemImage: "arrowshape.turn.up.left")
+            }
             Button { onProfile(message.username) } label: {
                 Label("View Profile", systemImage: "person.crop.circle")
             }
@@ -135,6 +146,45 @@ struct MessageRow: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func replyReference(_ reply: MessageReplyRef) -> some View {
+        Button { onJumpToMessage(reply.id) } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "arrowshape.turn.up.left")
+                    .font(.caption2)
+                if reply.deleted {
+                    Text("original message was deleted")
+                        .italic()
+                } else {
+                    if let avatar = reply.avatar {
+                        AvatarView(username: reply.username ?? "", avatarURL: avatar, size: 14)
+                    }
+                    ColoredName(
+                        name: reply.username ?? "unknown",
+                        color: reply.nameColor,
+                        font: .caption2.weight(.medium),
+                        fallback: .secondary
+                    )
+                    Text(replySnippet(reply))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+    }
+
+    private func replySnippet(_ reply: MessageReplyRef) -> String {
+        if let text = reply.text, !text.isEmpty {
+            let collapsed = text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespaces)
+            return collapsed.count > 60 ? String(collapsed.prefix(60)) + "…" : collapsed
+        }
+        return reply.image != nil ? "[image]" : ""
     }
 }
 

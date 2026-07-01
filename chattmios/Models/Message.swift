@@ -1,5 +1,29 @@
 import Foundation
 
+/// A lightweight reference to the message being replied to, embedded in a `Message`.
+struct MessageReplyRef: Equatable {
+    let id: String
+    var username: String?
+    var text: String?
+    var image: String?
+    var color: String?
+    var avatar: String?
+    var deleted: Bool
+
+    var nameColor: NameColor { NameColor(raw: color) }
+
+    init?(dict: [String: Any]) {
+        guard let id = dict["id"] as? String else { return nil }
+        self.id = id
+        self.username = dict["username"] as? String
+        self.text = dict["text"] as? String
+        self.image = dict["image"] as? String
+        self.color = dict["color"] as? String
+        self.avatar = dict["avatar"] as? String
+        self.deleted = (dict["deleted"] as? Bool) ?? false
+    }
+}
+
 /// A chat message as broadcast by the chattm server.
 struct Message: Identifiable, Equatable {
     let id: String
@@ -16,6 +40,7 @@ struct Message: Identifiable, Equatable {
     var mentions: [String]
     var image: String?      // attached image/file URL
     var system: Bool        // server/system announcement
+    var replyTo: MessageReplyRef?
 
     var nameColor: NameColor { NameColor(raw: color) }
 
@@ -37,7 +62,8 @@ struct Message: Identifiable, Equatable {
          redVerified: Bool = false,
          mentions: [String] = [],
          image: String? = nil,
-         system: Bool = false) {
+         system: Bool = false,
+         replyTo: MessageReplyRef? = nil) {
         self.id = id
         self.username = username
         self.text = text
@@ -52,6 +78,7 @@ struct Message: Identifiable, Equatable {
         self.mentions = mentions
         self.image = image
         self.system = system
+        self.replyTo = replyTo
     }
 
     init?(dict: [String: Any]) {
@@ -71,6 +98,7 @@ struct Message: Identifiable, Equatable {
         self.mentions = (dict["mentions"] as? [String]) ?? []
         self.image = dict["image"] as? String
         self.system = (dict["system"] as? Bool) ?? (dict["isSystem"] as? Bool) ?? false
+        self.replyTo = (dict["replyTo"] as? [String: Any]).flatMap(MessageReplyRef.init(dict:))
     }
 
     /// Server `time` may arrive as epoch milliseconds (number) or an ISO string.
