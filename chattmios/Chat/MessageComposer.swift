@@ -84,6 +84,11 @@ struct MessageComposer: View {
                         if isFocused { withAnimation(.easeOut(duration: 0.2)) { showEmojiPicker = false } }
                     }
                     .onSubmit { model.send() }
+                    #if os(macOS)
+                    .onExitCommand {
+                        if model.replyingTo != nil { model.cancelReply() }
+                    }
+                    #endif
 
                 if model.isUploading {
                     ProgressView()

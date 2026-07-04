@@ -22,6 +22,10 @@ final class SocketService {
     private(set) var isOwner = false
     private(set) var chatMuted = false
     private(set) var guestsAllowed = true
+    /// Available channel names (the server splits chat into rooms).
+    private(set) var channels: [String] = ["main"]
+    /// The channel the user is currently viewing.
+    private(set) var currentChannel: String = "main"
 
     /// Set when the server bans the user.
     private(set) var banNotice: String?
@@ -154,6 +158,8 @@ final class SocketService {
         socket.on("message") { [weak self] data, _ in
             guard let self, let dict = data.first as? [String: Any],
                   let msg = Message(dict: dict) else { return }
+            // Ignore stray messages from another channel (race during a switch).
+            guard msg.channel == nil || msg.channel == self.currentChannel else { return }
             self.appendMessage(msg)
         }
 
@@ -169,6 +175,17 @@ final class SocketService {
             self.usersLoaded = true
         }
 
+        // Channels: list of available channel names (sent on connect + after create/delete).
+        socket.on("channels") { [weak self] data, _ in
+            guard let self, let names = Self.stringArray(data.first) else { return }
+            self.channels = names
+        }
+        // Confirmation that the server moved us to a channel; its history follows.
+        socket.on("switchedChannel") { [weak self] data, _ in
+            guard let self, let name = data.first as? String else { return }
+            self.currentChannel = name
+        }
+
         socket.on("init") { [weak self] data, _ in
             guard let self, let dict = data.first as? [String: Any] else { return }
             self.isOwner = (dict["isOwner"] as? Bool) ?? (dict["owner"] as? Bool) ?? false
@@ -178,6 +195,7 @@ final class SocketService {
             if let uMuted = dict["uMuted"] as? [String: Any] {
                 self.muteNotice = Self.muteMessage(from: uMuted)
             }
+            if let ch = dict["currentChannel"] as? String { self.currentChannel = ch }
         }
 
         let emojiHandler: ([Any], SocketAckEmitter) -> Void = { [weak self] data, _ in
@@ -297,12 +315,39 @@ final class SocketService {
     func deleteAvatar() { socket?.emit("deleteAvatar") }
     func getProfile(_ username: String) { socket?.emit("getProfile", username) }
 
+    // MARK: Channels
+
+    /// Move to another channel. Clears the message list immediately (like the web
+    /// client) so the old channel's history doesn't linger while the new one loads.
+    func switchChannel(_ name: String) {
+        guard name != currentChannel else { return }
+        messages = []
+        currentChannel = name
+        socket?.emit("switchChannel", name)
+    }
+    func createChannel(_ name: String) { socket?.emit("createChannel", name) }
+    func deleteChannel(_ name: String) { socket?.emit("deleteChannel", name) }
+
+    /// Normalize a user-entered channel name to what the server accepts:
+    /// lowercase, spaces→dashes, only `a-z 0-9 -`, max 24 chars.
+    static func sanitizeChannelName(_ raw: String) -> String {
+        let lowered = raw.lowercased().replacingOccurrences(of: " ", with: "-")
+        let allowed = lowered.filter { $0.isLetter && $0.isASCII || $0.isNumber && $0.isASCII || $0 == "-" }
+        return String(allowed.prefix(24))
+    }
+
     // MARK: Parsing helpers
 
     private static func dictArray(_ raw: Any) -> [[String: Any]] {
         if let arr = raw as? [[String: Any]] { return arr }
         if let arr = raw as? [Any] { return arr.compactMap { $0 as? [String: Any] } }
         return []
+    }
+
+    private static func stringArray(_ raw: Any?) -> [String]? {
+        if let arr = raw as? [String] { return arr }
+        if let arr = raw as? [Any] { return arr.compactMap { $0 as? String } }
+        return nil
     }
 
     private static func parseUserlist(_ raw: Any) -> [ChatUserSummary] {

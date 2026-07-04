@@ -34,6 +34,8 @@ private struct ChatScreen: View {
     @State private var imageURL: IdentifiableURL?
     @State private var profileTarget: ProfileTarget?
     @State private var flashMessageID: String?
+    @State private var showCreateChannel = false
+    @State private var newChannelName = ""
 
     private var myProfile: UserProfile? { socket.profiles[model.username] }
 
@@ -42,6 +44,9 @@ private struct ChatScreen: View {
             Group {
                 #if os(macOS)
                 HStack(spacing: 0) {
+                    ChannelSidebar()
+                        .frame(width: 180)
+                    Divider()
                     chatArea
                     Divider()
                     MemberSidebar { name in profileTarget = ProfileTarget(id: name) }
@@ -64,6 +69,7 @@ private struct ChatScreen: View {
                 }
                 ToolbarItem(placement: .leadingBar) { connectionBadge }
                 #if !os(macOS)
+                ToolbarItem(placement: .principal) { channelMenu }
                 ToolbarItem(placement: .trailingBar) {
                     Button { showUserList = true } label: {
                         Label("\(socket.users.filter(\.online).count)", systemImage: "person.2.fill")
@@ -81,6 +87,22 @@ private struct ChatScreen: View {
             }
             .sheet(item: $profileTarget) { target in
                 ProfileView(username: target.id)
+            }
+            .alert("New channel", isPresented: $showCreateChannel) {
+                TextField("channel-name", text: $newChannelName)
+                    #if !os(macOS)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    #endif
+                Button("Cancel", role: .cancel) { newChannelName = "" }
+                Button("Create") {
+                    let name = SocketService.sanitizeChannelName(newChannelName)
+                    newChannelName = ""
+                    guard !name.isEmpty else { return }
+                    socket.createChannel(name)
+                }
+            } message: {
+                Text("Lowercase letters, numbers and dashes only.")
             }
             .task { socket.getProfile(model.username) }
             .onChange(of: socket.connection) { _, state in
@@ -138,7 +160,8 @@ private struct ChatScreen: View {
                                 model.focusRequest = true
                             },
                             onReply: { model.startReply($0) },
-                            onJumpToMessage: { jumpToMessage($0, proxy: proxy) }
+                            onJumpToMessage: { jumpToMessage($0, proxy: proxy) },
+                            lookupReplyAuthor: { replyAuthorInfo(for: $0) }
                         )
                         .id(message.id)
                     }
@@ -177,11 +200,63 @@ private struct ChatScreen: View {
         }
     }
 
+    #if !os(macOS)
+    @ViewBuilder
+    private var channelMenu: some View {
+        Menu {
+            Picker("Channel", selection: Binding(
+                get: { socket.currentChannel },
+                set: { socket.switchChannel($0) }
+            )) {
+                ForEach(socket.channels, id: \.self) { name in
+                    Text("# \(name)").tag(name)
+                }
+            }
+            if socket.isOwner {
+                Divider()
+                Button {
+                    newChannelName = ""
+                    showCreateChannel = true
+                } label: {
+                    Label("New channel…", systemImage: "plus")
+                }
+                if socket.currentChannel != "main" {
+                    Button(role: .destructive) {
+                        socket.deleteChannel(socket.currentChannel)
+                    } label: {
+                        Label("Delete # \(socket.currentChannel)", systemImage: "trash")
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 2) {
+                Text("# \(socket.currentChannel)").font(.subheadline.weight(.medium))
+                Image(systemName: "chevron.down").font(.caption2)
+            }
+            .foregroundStyle(Brand.accent)
+        }
+    }
+    #endif
+
     private func isOwner(username: String) -> Bool {
         if let user = socket.users.first(where: { $0.username.caseInsensitiveCompare(username) == .orderedSame }) {
             return user.isOwner
         }
         return socket.profiles[username]?.isOwner ?? false
+    }
+
+    /// Live badge/color lookup for reply previews — the server's `replyTo` payload
+    /// doesn't carry badge state, so we fall back to the current userlist/profile cache.
+    private func replyAuthorInfo(for username: String) -> ReplyAuthorInfo? {
+        if let user = socket.users.first(where: { $0.username.caseInsensitiveCompare(username) == .orderedSame }) {
+            return ReplyAuthorInfo(isOwner: user.isOwner, verified: user.verified,
+                                    redVerified: user.redVerified, isGuest: user.isGuest, color: user.color)
+        }
+        if let profile = socket.profiles[username] {
+            return ReplyAuthorInfo(isOwner: profile.isOwner, verified: profile.verified,
+                                    redVerified: profile.redVerified, isGuest: profile.isGuest, color: profile.color)
+        }
+        return nil
     }
 
     private func showsHeader(at index: Int) -> Bool {
@@ -206,6 +281,70 @@ private struct ChatScreen: View {
 }
 
 #if os(macOS)
+private struct ChannelSidebar: View {
+    @Environment(SocketService.self) private var socket
+    @State private var newChannelName = ""
+
+    var body: some View {
+        VStack(spacing: 0) {
+            List {
+                Section("Channels — \(socket.channels.count)") {
+                    ForEach(socket.channels, id: \.self) { name in row(name) }
+                }
+            }
+            .listStyle(.inset)
+
+            if socket.isOwner {
+                Divider()
+                HStack(spacing: 6) {
+                    TextField("new-channel", text: $newChannelName)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.caption)
+                        .onSubmit(create)
+                    Button(action: create) {
+                        Image(systemName: "plus.circle.fill")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Brand.accent)
+                    .disabled(SocketService.sanitizeChannelName(newChannelName).isEmpty)
+                }
+                .padding(8)
+            }
+        }
+    }
+
+    private func create() {
+        let name = SocketService.sanitizeChannelName(newChannelName)
+        newChannelName = ""
+        guard !name.isEmpty else { return }
+        socket.createChannel(name)
+    }
+
+    private func row(_ name: String) -> some View {
+        let isActive = name == socket.currentChannel
+        return Button { socket.switchChannel(name) } label: {
+            HStack(spacing: 6) {
+                Text("#").foregroundStyle(.secondary)
+                Text(name)
+                    .font(.caption.weight(isActive ? .semibold : .regular))
+                    .foregroundStyle(isActive ? Brand.accent : .primary)
+                    .lineLimit(1)
+                Spacer()
+                if socket.isOwner && name != "main" {
+                    Button { socket.deleteChannel(name) } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Delete channel")
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 private struct MemberSidebar: View {
     @Environment(SocketService.self) private var socket
     var onProfile: (String) -> Void

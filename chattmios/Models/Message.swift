@@ -10,8 +10,6 @@ struct MessageReplyRef: Equatable {
     var avatar: String?
     var deleted: Bool
 
-    var nameColor: NameColor { NameColor(raw: color) }
-
     init?(dict: [String: Any]) {
         guard let id = dict["id"] as? String else { return nil }
         self.id = id
@@ -41,6 +39,7 @@ struct Message: Identifiable, Equatable {
     var image: String?      // attached image/file URL
     var system: Bool        // server/system announcement
     var replyTo: MessageReplyRef?
+    var channel: String?    // channel this message belongs to (nil = legacy/global)
 
     var nameColor: NameColor { NameColor(raw: color) }
 
@@ -63,7 +62,8 @@ struct Message: Identifiable, Equatable {
          mentions: [String] = [],
          image: String? = nil,
          system: Bool = false,
-         replyTo: MessageReplyRef? = nil) {
+         replyTo: MessageReplyRef? = nil,
+         channel: String? = nil) {
         self.id = id
         self.username = username
         self.text = text
@@ -79,6 +79,7 @@ struct Message: Identifiable, Equatable {
         self.image = image
         self.system = system
         self.replyTo = replyTo
+        self.channel = channel
     }
 
     init?(dict: [String: Any]) {
@@ -99,6 +100,7 @@ struct Message: Identifiable, Equatable {
         self.image = dict["image"] as? String
         self.system = (dict["system"] as? Bool) ?? (dict["isSystem"] as? Bool) ?? false
         self.replyTo = (dict["replyTo"] as? [String: Any]).flatMap(MessageReplyRef.init(dict:))
+        self.channel = dict["channel"] as? String
     }
 
     /// Server `time` may arrive as epoch milliseconds (number) or an ISO string.

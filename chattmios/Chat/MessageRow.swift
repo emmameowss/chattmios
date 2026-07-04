@@ -1,5 +1,15 @@
 import SwiftUI
 
+/// Current badge/color state for a reply-preview author, looked up live from the
+/// userlist/profile cache since the server's `replyTo` payload doesn't carry badges.
+struct ReplyAuthorInfo {
+    var isOwner: Bool
+    var verified: Bool
+    var redVerified: Bool
+    var isGuest: Bool
+    var color: String?
+}
+
 struct MessageRow: View {
     let message: Message
     let emojiMap: [String: String]
@@ -15,8 +25,12 @@ struct MessageRow: View {
     var onMention: (String) -> Void
     var onReply: (Message) -> Void
     var onJumpToMessage: (String) -> Void
+    var lookupReplyAuthor: (String) -> ReplyAuthorInfo?
 
     @GestureState private var swipeOffset: CGFloat = 0
+    #if os(macOS)
+    @State private var isHovering = false
+    #endif
 
     private var isMine: Bool {
         message.username.caseInsensitiveCompare(currentUsername ?? "") == .orderedSame
@@ -72,6 +86,15 @@ struct MessageRow: View {
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                     }
+                    #if os(macOS)
+                    .overlay(alignment: .trailing) {
+                        if isHovering {
+                            replyHoverButton
+                                .offset(x: 32)
+                                .transition(.opacity)
+                        }
+                    }
+                    #endif
                 }
 
                 if let text = message.text, !text.isEmpty {
@@ -83,6 +106,15 @@ struct MessageRow: View {
                     MessageAttachment(url: url) { onImage(url) }
                 }
             }
+            #if os(macOS)
+            .overlay(alignment: .topTrailing) {
+                if !showsHeader && isHovering {
+                    replyHoverButton
+                        .offset(x: 32, y: -2)
+                        .transition(.opacity)
+                }
+            }
+            #endif
             Spacer(minLength: 0)
         }
         .padding(.top, showsHeader ? 14 : 3)
@@ -105,6 +137,11 @@ struct MessageRow: View {
                 .offset(x: swipeOffset * 0.25 - 28)
                 .animation(.interactiveSpring, value: swipeOffset)
         }
+        #if os(macOS)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
+        }
+        #endif
         .gesture(
             DragGesture(minimumDistance: 15, coordinateSpace: .local)
                 .updating($swipeOffset) { value, state, _ in
@@ -148,8 +185,22 @@ struct MessageRow: View {
         }
     }
 
+    #if os(macOS)
+    private var replyHoverButton: some View {
+        Button { onReply(message) } label: {
+            Image(systemName: "arrowshape.turn.up.left.fill")
+                .font(.caption2)
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(Brand.accent, in: .rect(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+    }
+    #endif
+
     @ViewBuilder
     private func replyReference(_ reply: MessageReplyRef) -> some View {
+        let author = reply.username.flatMap(lookupReplyAuthor)
         Button { onJumpToMessage(reply.id) } label: {
             HStack(spacing: 5) {
                 Image(systemName: "arrowshape.turn.up.left")
@@ -163,10 +214,14 @@ struct MessageRow: View {
                     }
                     ColoredName(
                         name: reply.username ?? "unknown",
-                        color: reply.nameColor,
+                        color: NameColor(raw: reply.color ?? author?.color),
                         font: .caption2.weight(.medium),
                         fallback: .secondary
                     )
+                    if let author {
+                        UserBadges(isOwner: author.isOwner, verified: author.verified,
+                                   redVerified: author.redVerified, isGuest: author.isGuest)
+                    }
                     Text(replySnippet(reply))
                         .lineLimit(1)
                         .truncationMode(.tail)
