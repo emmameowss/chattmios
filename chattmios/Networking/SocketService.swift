@@ -36,6 +36,10 @@ final class SocketService {
     private(set) var kickNotice: String?
     /// Set when the server goes into maintenance mode (session remains valid).
     private(set) var maintenanceNotice: String?
+    /// Set when the handshake is rejected because the session is no longer valid
+    /// (deleted server-side, or the underlying Clerk session expired/was revoked).
+    /// The client should sign out rather than retry.
+    private(set) var sessionInvalid = false
     /// Inline toast shown near the composer; auto-dismisses after 3 s.
     var commandError: String?
     /// Persistent mute notice; shown above the composer until unmuted.
@@ -60,6 +64,7 @@ final class SocketService {
     func connect(session: String) {
         guard self.socket == nil else { return }
         self.session = session
+        sessionInvalid = false
         connection = .connecting
 
         let manager = SocketManager(socketURL: Server.baseURL, config: [
@@ -87,6 +92,7 @@ final class SocketService {
         banNotice = nil
         kickNotice = nil
         maintenanceNotice = nil
+        sessionInvalid = false
         muteNotice = nil
         serverStatus = nil
         usersLoaded = false
@@ -147,7 +153,18 @@ final class SocketService {
         }
         socket.on(clientEvent: .error) { [weak self] data, _ in
             guard let self else { return }
-            self.connection = .failed((data.first as? String) ?? "Connection error")
+            let message = Self.message(from: data.first)
+            // The session is gone (deleted server-side or the Clerk session
+            // expired/was revoked). Retrying is futile — signal a sign-out.
+            if message == "session expired" || message == "not authenticated" {
+                self.session = nil
+                self.reconnectTask?.cancel()
+                self.reconnectTask = nil
+                self.connection = .disconnected
+                self.sessionInvalid = true
+                return
+            }
+            self.connection = .failed(message ?? "Connection error")
             self.scheduleReconnect()
         }
 

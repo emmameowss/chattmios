@@ -59,6 +59,10 @@ struct RootView: View {
                 socket.disconnect()
             }
         }
+        .onChange(of: socket.sessionInvalid) { _, invalid in
+            // Server rejected the session (expired/revoked) → return to login.
+            if invalid { Task { await auth.signOut() } }
+        }
     }
 }
 
