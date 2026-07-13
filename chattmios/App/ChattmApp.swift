@@ -12,7 +12,7 @@ struct ChattmApp: App {
         NotificationManager.shared.configure()
         // Clerk is the identity provider for real accounts (mirrors the web
         // client's clerk-js). The publishable key is public and safe to embed.
-        Clerk.configure(publishableKey: "pk_test_dGhhbmtmdWwtZWVsLTc0LmNsZXJrLmFjY291bnRzLmRldiQ")
+        Clerk.configure(publishableKey: "pk_live_Y2xlcmsuY2hhdHRtLmFwcCQ")
     }
 
     var body: some Scene {
