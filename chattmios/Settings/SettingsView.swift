@@ -1,12 +1,16 @@
 import SwiftUI
+import ClerkKit
+import ClerkKitUI
 
 struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(AuthManager.self) private var auth
+    @Environment(SocketService.self) private var socket
 
     @State private var stats: ServerStats?
     @State private var version: VersionInfo?
     @State private var showSignOutConfirm = false
+    @State private var showAccount = false
 
     var body: some View {
         @Bindable var settings = settings
@@ -86,6 +90,16 @@ struct SettingsView: View {
                             }
                         }
                     }
+                    if !auth.isGuest {
+                        // Account (email, password, profile picture, connected
+                        // logins) is managed by Clerk. Changes to the picture
+                        // are re-synced from Clerk when the sheet dismisses.
+                        Button {
+                            showAccount = true
+                        } label: {
+                            Label("Manage Account", systemImage: "person.crop.circle")
+                        }
+                    }
                     Button(role: .destructive) {
                         showSignOutConfirm = true
                     } label: {
@@ -105,6 +119,12 @@ struct SettingsView: View {
                 Button("Sign Out", role: .destructive) { Task { await auth.signOut() } }
             } message: {
                 Text("You'll need to sign in again to chat.")
+            }
+            .sheet(isPresented: $showAccount, onDismiss: {
+                // Pull the (possibly changed) picture back from Clerk.
+                socket.refreshAvatar()
+            }) {
+                UserProfileView()
             }
         }
         .fillAvailableSpace()

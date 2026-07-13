@@ -1,6 +1,10 @@
 import SwiftUI
 import ClerkKit
-import ClerkKitUI
+#if os(macOS)
+import UniformTypeIdentifiers
+#else
+import PhotosUI
+#endif
 
 struct ProfileEditView: View {
     let profile: UserProfile
@@ -13,10 +17,16 @@ struct ProfileEditView: View {
     @State private var bio: String = ""
     @State private var status: PresenceStatus = .online
     @State private var localColor: String?
-    @State private var showAccount = false
     @State private var showColorPicker = false
+    #if os(macOS)
+    @State private var showAvatarPicker = false
+    #else
+    @State private var avatarItem: PhotosPickerItem?
+    #endif
+    @State private var uploadingAvatar = false
 
     /// The authoritative avatar, kept fresh as `savedAvatar` re-fetches land.
+    /// The picture itself lives in Clerk; broader account management is in Settings.
     private var displayedAvatar: String? {
         socket.profiles[profile.username]?.avatar ?? profile.avatar
     }
@@ -57,18 +67,34 @@ struct ProfileEditView: View {
                 HStack {
                     Spacer()
                     VStack(spacing: 10) {
-                        AvatarView(username: username.isEmpty ? profile.username : username,
-                                   avatarURL: displayedAvatar, size: 96)
-                        // Profile pictures live in Clerk now, so avatar changes
-                        // (and the rest of account management) happen in Clerk's
-                        // account UI. We re-sync from Clerk when it dismisses.
-                        Button {
-                            showAccount = true
-                        } label: {
-                            Label("Manage Account", systemImage: "person.crop.circle")
+                        ZStack {
+                            AvatarView(username: username.isEmpty ? profile.username : username,
+                                       avatarURL: displayedAvatar, size: 96)
+                            if uploadingAvatar { ProgressView().tint(.white) }
+                        }
+                        // The picture lives in Clerk; we push changes there and
+                        // then ask the server to re-sync the in-app avatar.
+                        HStack(spacing: 16) {
+                            #if os(macOS)
+                            Button { showAvatarPicker = true } label: {
+                                Label("Change", systemImage: "photo")
+                            }
+                            .fileImporter(isPresented: $showAvatarPicker, allowedContentTypes: [.image]) { result in
+                                if case .success(let url) = result { Task { await uploadAvatarFile(url) } }
+                            }
+                            #else
+                            PhotosPicker(selection: $avatarItem, matching: .images) {
+                                Label("Change", systemImage: "photo")
+                            }
+                            #endif
+                            if displayedAvatar != nil {
+                                Button(role: .destructive) {
+                                    Task { await removeAvatar() }
+                                } label: { Label("Remove", systemImage: "trash") }
+                            }
                         }
                         .font(.caption)
-                        .disabled(auth.isGuest)
+                        .disabled(auth.isGuest || uploadingAvatar)
                     }
                     Spacer()
                 }
@@ -127,14 +153,14 @@ struct ProfileEditView: View {
             colorPickerSheet
         }
         #endif
-        .sheet(isPresented: $showAccount, onDismiss: {
-            // Pull the (possibly changed) picture back from Clerk.
-            socket.refreshAvatar()
-        }) {
-            UserProfileView()
+        #if !os(macOS)
+        .onChange(of: avatarItem) { _, item in
+            guard let item else { return }
+            Task { await uploadAvatarItem(item); avatarItem = nil }
         }
+        #endif
         .onChange(of: socket.avatarSyncTick) { _, _ in
-            // Server confirmed the Clerk avatar sync → refresh our copy.
+            // Server confirmed a Clerk avatar sync → refresh our copy.
             socket.getProfile(profile.username)
         }
         .onAppear {
@@ -179,4 +205,45 @@ struct ProfileEditView: View {
         Haptics.success()
         dismiss()
     }
+
+    // MARK: Profile picture (stored in Clerk)
+
+    /// Upload new image data to Clerk, then have the server re-sync the avatar.
+    private func setAvatar(data: Data) async {
+        uploadingAvatar = true
+        defer { uploadingAvatar = false }
+        do {
+            _ = try await Clerk.shared.user?.setProfileImage(imageData: data)
+            socket.refreshAvatar()
+            Haptics.success()
+        } catch {
+            Haptics.warning()
+        }
+    }
+
+    private func removeAvatar() async {
+        uploadingAvatar = true
+        defer { uploadingAvatar = false }
+        do {
+            _ = try await Clerk.shared.user?.deleteProfileImage()
+            socket.refreshAvatar()
+            Haptics.success()
+        } catch {
+            Haptics.warning()
+        }
+    }
+
+    #if os(macOS)
+    private func uploadAvatarFile(_ fileURL: URL) async {
+        _ = fileURL.startAccessingSecurityScopedResource()
+        defer { fileURL.stopAccessingSecurityScopedResource() }
+        guard let data = try? Data(contentsOf: fileURL) else { return }
+        await setAvatar(data: data)
+    }
+    #else
+    private func uploadAvatarItem(_ item: PhotosPickerItem) async {
+        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+        await setAvatar(data: data)
+    }
+    #endif
 }
