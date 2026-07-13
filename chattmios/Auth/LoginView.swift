@@ -1,11 +1,14 @@
 import SwiftUI
+import ClerkKit
+import ClerkKitUI
 
 struct LoginView: View {
     @Environment(AuthManager.self) private var auth
+    @Environment(Clerk.self) private var clerk
 
     @State private var guestUsername = ""
     @State private var showGuestField = false
-    @State private var showWebAuth = false
+    @State private var showAuth = false
     @State private var isWorking = false
     @State private var guestsDisabled = false
 
@@ -25,13 +28,14 @@ struct LoginView: View {
                 GlassEffectContainer(spacing: 14) {
                     VStack(spacing: 14) {
                         Button {
-                            showWebAuth = true
+                            showAuth = true
                         } label: {
-                            Label("Continue with Hack Club", systemImage: "person.badge.key.fill")
+                            Label("Sign in or Create account", systemImage: "person.crop.circle.badge.checkmark")
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 6)
                         }
                         .buttonStyle(.glassProminent)
+                        .disabled(isWorking)
 
                         if showGuestField && !guestsDisabled {
                             TextField("Guest name (optional)", text: $guestUsername)
@@ -91,12 +95,20 @@ struct LoginView: View {
                 guestsDisabled = info.guestsDisabled
             }
         }
-        .sheet(isPresented: $showWebAuth) {
-            HCAWebAuthView { session in
-                showWebAuth = false
-                Task { await auth.completeWebAuth(session: session) }
+        .sheet(isPresented: $showAuth) {
+            AuthView()
+        }
+        .onChange(of: clerk.user?.id) { _, userID in
+            // Clerk finished signing the user in → exchange their session JWT
+            // for one of our own app sessions. Only when fully signed out on
+            // our side (avoids re-exchanging on an already-signed-in launch).
+            guard userID != nil, auth.state == .signedOut, !isWorking else { return }
+            showAuth = false
+            Task {
+                isWorking = true
+                await auth.completeClerkLogin()
+                isWorking = false
             }
-            .ignoresSafeArea()
         }
     }
 

@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		AA00000000000000000000B1 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = AA00000000000000000000B2 /* SocketIO */; };
+		AA00000000000000000000C1 /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA00000000000000000000C2 /* ClerkKit */; };
+		AA00000000000000000000C4 /* ClerkKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = AA00000000000000000000C5 /* ClerkKitUI */; };
 		CE5D72DC2FF862B600EE5754 /* .wakatime-project in Resources */ = {isa = PBXBuildFile; fileRef = CE5D72DB2FF862B100EE5754 /* .wakatime-project */; };
 		CE8EDE752FF2D7CC00330F25 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = CE8EDE742FF2D7CC00330F25 /* README.md */; };
 		CE8EDE792FF2D92500330F25 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = CE8EDE782FF2D92500330F25 /* .gitignore */; };
@@ -33,6 +35,8 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				AA00000000000000000000B1 /* SocketIO in Frameworks */,
+				AA00000000000000000000C1 /* ClerkKit in Frameworks */,
+				AA00000000000000000000C4 /* ClerkKitUI in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -76,6 +80,8 @@
 			name = chattmios;
 			packageProductDependencies = (
 				AA00000000000000000000B2 /* SocketIO */,
+				AA00000000000000000000C2 /* ClerkKit */,
+				AA00000000000000000000C5 /* ClerkKitUI */,
 			);
 			productName = chattmios;
 			productReference = 000000000000000000000120 /* chattmios.app */;
@@ -107,6 +113,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				AA00000000000000000000B3 /* XCRemoteSwiftPackageReference "socket" */,
+				AA00000000000000000000C3 /* XCRemoteSwiftPackageReference "clerk-ios" */,
 			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 000000000000000000000020 /* Products */;
@@ -274,7 +281,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 6N5VVR46QM;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -297,7 +304,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.1;
+				MARKETING_VERSION = 2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = zip.emmameowss.chattm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -318,7 +325,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 6N5VVR46QM;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -341,7 +348,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.1;
+				MARKETING_VERSION = 2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = zip.emmameowss.chattm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -388,6 +395,14 @@
 				minimumVersion = 16.1.1;
 			};
 		};
+		AA00000000000000000000C3 /* XCRemoteSwiftPackageReference "clerk-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/clerk/clerk-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.3.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -395,6 +410,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AA00000000000000000000B3 /* XCRemoteSwiftPackageReference "socket" */;
 			productName = SocketIO;
+		};
+		AA00000000000000000000C2 /* ClerkKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA00000000000000000000C3 /* XCRemoteSwiftPackageReference "clerk-ios" */;
+			productName = ClerkKit;
+		};
+		AA00000000000000000000C5 /* ClerkKitUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA00000000000000000000C3 /* XCRemoteSwiftPackageReference "clerk-ios" */;
+			productName = ClerkKitUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

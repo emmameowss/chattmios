@@ -1,4 +1,5 @@
 import SwiftUI
+import ClerkKit
 
 @main
 struct ChattmApp: App {
@@ -9,6 +10,9 @@ struct ChattmApp: App {
     init() {
         AppFonts.registerIfNeeded()
         NotificationManager.shared.configure()
+        // Clerk is the identity provider for real accounts (mirrors the web
+        // client's clerk-js). The publishable key is public and safe to embed.
+        Clerk.configure(publishableKey: "pk_test_dGhhbmtmdWwtZWVsLTc0LmNsZXJrLmFjY291bnRzLmRldiQ")
     }
 
     var body: some Scene {
@@ -17,6 +21,7 @@ struct ChattmApp: App {
                 .environment(auth)
                 .environment(settings)
                 .environment(socket)
+                .environment(Clerk.shared)
                 .preferredColorScheme(settings.appearance.colorScheme)
                 .tint(Brand.accent)
                 #if os(macOS)

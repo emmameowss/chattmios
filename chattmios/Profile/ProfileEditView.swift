@@ -1,6 +1,6 @@
 import SwiftUI
-import PhotosUI
-import UniformTypeIdentifiers
+import ClerkKit
+import ClerkKitUI
 
 struct ProfileEditView: View {
     let profile: UserProfile
@@ -13,14 +13,13 @@ struct ProfileEditView: View {
     @State private var bio: String = ""
     @State private var status: PresenceStatus = .online
     @State private var localColor: String?
-    #if os(macOS)
-    @State private var showAvatarPicker = false
-    #else
-    @State private var avatarItem: PhotosPickerItem?
-    #endif
-    @State private var avatarPreview: String?
-    @State private var uploadingAvatar = false
+    @State private var showAccount = false
     @State private var showColorPicker = false
+
+    /// The authoritative avatar, kept fresh as `savedAvatar` re-fetches land.
+    private var displayedAvatar: String? {
+        socket.profiles[profile.username]?.avatar ?? profile.avatar
+    }
 
     var body: some View {
         #if os(macOS)
@@ -58,34 +57,18 @@ struct ProfileEditView: View {
                 HStack {
                     Spacer()
                     VStack(spacing: 10) {
-                        ZStack {
-                            AvatarView(username: username.isEmpty ? profile.username : username,
-                                       avatarURL: avatarPreview ?? profile.avatar, size: 96)
-                            if uploadingAvatar {
-                                ProgressView().tint(.white)
-                            }
-                        }
-                        HStack(spacing: 16) {
-                            #if os(macOS)
-                            Button { showAvatarPicker = true } label: {
-                                Label("Change", systemImage: "photo")
-                            }
-                            .fileImporter(isPresented: $showAvatarPicker, allowedContentTypes: [.image]) { result in
-                                if case .success(let url) = result { Task { await uploadAvatarFile(url) } }
-                            }
-                            #else
-                            PhotosPicker(selection: $avatarItem, matching: .images) {
-                                Label("Change", systemImage: "photo")
-                            }
-                            #endif
-                            if profile.avatar != nil || avatarPreview != nil {
-                                Button(role: .destructive) {
-                                    socket.deleteAvatar()
-                                    avatarPreview = nil
-                                } label: { Label("Remove", systemImage: "trash") }
-                            }
+                        AvatarView(username: username.isEmpty ? profile.username : username,
+                                   avatarURL: displayedAvatar, size: 96)
+                        // Profile pictures live in Clerk now, so avatar changes
+                        // (and the rest of account management) happen in Clerk's
+                        // account UI. We re-sync from Clerk when it dismisses.
+                        Button {
+                            showAccount = true
+                        } label: {
+                            Label("Manage Account", systemImage: "person.crop.circle")
                         }
                         .font(.caption)
+                        .disabled(auth.isGuest)
                     }
                     Spacer()
                 }
@@ -143,11 +126,17 @@ struct ProfileEditView: View {
         .sheet(isPresented: $showColorPicker) {
             colorPickerSheet
         }
-        .onChange(of: avatarItem) { _, item in
-            guard let item else { return }
-            Task { await uploadAvatar(item); avatarItem = nil }
-        }
         #endif
+        .sheet(isPresented: $showAccount, onDismiss: {
+            // Pull the (possibly changed) picture back from Clerk.
+            socket.refreshAvatar()
+        }) {
+            UserProfileView()
+        }
+        .onChange(of: socket.avatarSyncTick) { _, _ in
+            // Server confirmed the Clerk avatar sync → refresh our copy.
+            socket.getProfile(profile.username)
+        }
         .onAppear {
             username = profile.username
             pronouns = profile.pronouns
@@ -190,46 +179,4 @@ struct ProfileEditView: View {
         Haptics.success()
         dismiss()
     }
-
-    #if os(macOS)
-    private func uploadAvatarFile(_ fileURL: URL) async {
-        guard let session = auth.session else { return }
-        _ = fileURL.startAccessingSecurityScopedResource()
-        defer { fileURL.stopAccessingSecurityScopedResource() }
-        guard let data = try? Data(contentsOf: fileURL) else { return }
-        uploadingAvatar = true
-        defer { uploadingAvatar = false }
-        let ext = fileURL.pathExtension.lowercased().isEmpty ? "jpg" : fileURL.pathExtension.lowercased()
-        let mime = UTType(filenameExtension: ext)?.preferredMIMEType ?? "image/jpeg"
-        do {
-            let url = try await RESTClient.shared.upload(
-                data: data, filename: "avatar.\(ext)", mimeType: mime,
-                username: auth.currentUsername ?? username, session: session, avatar: true)
-            socket.setAvatar(url)
-            avatarPreview = url
-            Haptics.success()
-        } catch {
-            Haptics.warning()
-        }
-    }
-    #else
-    private func uploadAvatar(_ item: PhotosPickerItem) async {
-        guard let session = auth.session,
-              let data = try? await item.loadTransferable(type: Data.self) else { return }
-        uploadingAvatar = true
-        defer { uploadingAvatar = false }
-        let ext = item.supportedContentTypes.first?.preferredFilenameExtension ?? "jpg"
-        let mime = item.supportedContentTypes.first?.preferredMIMEType ?? "image/jpeg"
-        do {
-            let url = try await RESTClient.shared.upload(
-                data: data, filename: "avatar.\(ext)", mimeType: mime,
-                username: auth.currentUsername ?? username, session: session, avatar: true)
-            socket.setAvatar(url)
-            avatarPreview = url
-            Haptics.success()
-        } catch {
-            Haptics.warning()
-        }
-    }
-    #endif
 }

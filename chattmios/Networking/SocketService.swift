@@ -18,6 +18,9 @@ final class SocketService {
     private(set) var usersLoaded = false
     private(set) var emojiMap: [String: String] = [:]
     private(set) var profiles: [String: UserProfile] = [:]
+    /// Bumps each time the server confirms an avatar change (`savedAvatar`),
+    /// so views can re-fetch the affected profile from the authoritative store.
+    private(set) var avatarSyncTick = 0
     private(set) var typingUsers: Set<String> = []
     private(set) var isOwner = false
     private(set) var chatMuted = false
@@ -128,7 +131,7 @@ final class SocketService {
             self.maintenanceNotice = nil
             socket.emit("userActive")
             // Trigger emitUserList() on the server — it only fires automatically
-            // for guest connections, not HCA users, so we nudge it with setStatus.
+            // for guest connections, not signed-in accounts, so we nudge it with setStatus.
             socket.emit("setStatus", "online")
             // Fallback: stop the spinner after 4 s if userlist never arrives.
             Task { [weak self] in
@@ -209,6 +212,13 @@ final class SocketService {
             guard let self, let dict = data.first as? [String: Any],
                   let profile = UserProfile(dict: dict) else { return }
             self.profiles[profile.username] = profile
+        }
+
+        // Server confirms the avatar was re-synced from Clerk (arg is the new
+        // URL or null). It also broadcasts an updated user list; we bump a tick
+        // so the profile editor can re-fetch the authoritative avatar.
+        socket.on("savedAvatar") { [weak self] _, _ in
+            self?.avatarSyncTick += 1
         }
 
         // Typing indicators (best-effort: server may send username string or dict)
@@ -311,8 +321,9 @@ final class SocketService {
     func setBio(_ bio: String) { socket?.emit("setBio", bio) }
     func setPronouns(_ pronouns: String) { socket?.emit("setPronouns", pronouns) }
     func setStatus(_ status: PresenceStatus) { socket?.emit("setStatus", status.rawValue) }
-    func setAvatar(_ url: String) { socket?.emit("setAvatar", url) }
-    func deleteAvatar() { socket?.emit("deleteAvatar") }
+    /// Ask the server to re-sync the avatar from Clerk (the source of truth).
+    /// Called after the user changes their picture in Clerk's account UI.
+    func refreshAvatar() { socket?.emit("refreshAvatar") }
     func getProfile(_ username: String) { socket?.emit("getProfile", username) }
 
     // MARK: Channels

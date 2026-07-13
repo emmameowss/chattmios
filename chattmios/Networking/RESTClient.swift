@@ -69,6 +69,34 @@ final class RESTClient: NSObject, URLSessionTaskDelegate {
         return (obj["username"] as? String, (obj["guest"] as? Bool) ?? false)
     }
 
+    /// Exchange a Clerk session JWT for one of our own app sessions.
+    /// POSTs `{"token": ...}` to `/clerk-login`; the server verifies the JWT
+    /// with Clerk, resolves the account, and returns `{"session": ...}`.
+    func clerkLogin(token: String) async throws -> String {
+        let url = Server.url("clerk-login")
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue(Server.origin, forHTTPHeaderField: "Origin")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["token": token])
+        let (data, response) = try await self.session.data(for: req)
+        guard let http = response as? HTTPURLResponse else { throw ServerError.badResponse(0) }
+        if http.statusCode == 200,
+           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let session = obj["session"] as? String {
+            return session
+        }
+        // Surface the server's error message when present.
+        if let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let message = obj["error"] as? String {
+            throw ServerError.message(message)
+        }
+        if http.statusCode == 429 {
+            throw ServerError.message("Too many attempts, try again later.")
+        }
+        throw ServerError.message("Sign-in failed, please try again.")
+    }
+
     func signOut(session: String) async {
         let url = Server.url("signout", query: [.init(name: "session", value: session)])
         _ = try? await self.session.data(from: url)

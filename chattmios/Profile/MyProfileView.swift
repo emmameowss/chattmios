@@ -48,7 +48,7 @@ struct MyProfileView: View {
 
                     if auth.isGuest {
                         GlassCard {
-                            Label("Sign in with Hack Club to customize your profile, set an avatar, and keep your name.",
+                            Label("Sign in with an account to customize your profile, set an avatar, and keep your name.",
                                   systemImage: "info.circle")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)

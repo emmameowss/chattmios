@@ -1,4 +1,5 @@
 import SwiftUI
+import ClerkKit
 
 struct RootView: View {
     @Environment(AuthManager.self) private var auth
@@ -45,6 +46,10 @@ struct RootView: View {
         .animation(.easeInOut, value: auth.state)
         .task {
             await auth.bootstrap()
+        }
+        .onOpenURL { url in
+            // Lets clerk-js complete OAuth (Google/Apple) redirects.
+            Task { try? await Clerk.shared.handle(url) }
         }
         .onChange(of: auth.state) { _, newValue in
             if newValue == .signedIn, let session = auth.session {
