@@ -1,5 +1,8 @@
 # chat™ app
 
+## deprecation notice
+this app no longer works/no longer seems to work, and even if it does i won't be updating it anymore since i have no idea how to code in swift and i also just dont want to really
+
 a vibe coded swiftui ios/ipados/macos app for https://chattm.app
 
 check out https://github.com/emmameowss/chattm, the site this app is based on that's not as vibe coded as this
